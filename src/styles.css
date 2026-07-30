@@ -1,0 +1,72 @@
+:root {
+  /* Without this, native controls (a <select>'s own dropdown popup,
+   * scrollbars, etc.) render with the OS/browser's default light styling
+   * regardless of our dark-mode CSS variables below — this tells the
+   * webview both schemes are supported so it follows the same
+   * prefers-color-scheme the rest of the app already reacts to. */
+  color-scheme: light dark;
+
+  --titlebar-height: 32px;
+  --panel-header-height: 41px;
+  --divider-width: 1px;
+
+  --surface-1: #ffffff;
+  --surface-2: #f0f0f0;
+  --surface-3: #e2e2e2;
+  --border: #d2d2d2;
+  --text: #131313;
+  --text-muted: #5c5c5c;
+  /* --primary drives filled/solid elements (buttons, the split divider's
+   * drag state); --accent drives borders, outlines and highlighted text.
+   * Both are overridable per-user in Settings — see settings.ts, which sets
+   * them as inline styles on this same element, taking precedence over the
+   * scheme-specific values here and below. */
+  --primary: #3b7de0;
+  --accent: #3b7de0;
+  --error: #c8342f;
+  --warning: #9a6700;
+  --success: #1a7f37;
+
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background-color: var(--surface-1);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: #1c1c1c;
+    --surface-2: #252525;
+    --surface-3: #343434;
+    --border: #383838;
+    --text: #f0f0f0;
+    --text-muted: #9a9a9a;
+    --primary: #5b9bff;
+    --accent: #5b9bff;
+    --error: #ff6b63;
+    --warning: #e3b341;
+    --success: #3fb950;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+}

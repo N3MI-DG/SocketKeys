@@ -1,0 +1,2160 @@
+{
+  "ABORT": {
+    "description": "Aborts the calibration process, discarding the current results. This command is only available during drift calibration.",
+    "params": [],
+    "syntax": "ABORT"
+  },
+  "ACCELEROMETER_DEBUG_READ": {
+    "description": "queries ADXL345 register \"register\" (e.g. 44 or 0x2C). Can be useful for debugging purposes.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": true
+      },
+      {
+        "name": "REG",
+        "optional": false
+      }
+    ],
+    "syntax": "ACCELEROMETER_DEBUG_READ [CHIP=<config_name>] REG=<register>"
+  },
+  "ACCELEROMETER_DEBUG_WRITE": {
+    "description": "Writes raw \"value\" into a register \"register\". Both \"value\" and \"register\" can be a decimal or a hexadecimal integer. Use with care, and refer to ADXL345 data sheet for the reference.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": true
+      },
+      {
+        "name": "REG",
+        "optional": false
+      },
+      {
+        "name": "VAL",
+        "optional": false
+      }
+    ],
+    "syntax": "ACCELEROMETER_DEBUG_WRITE [CHIP=<config_name>] REG=<register> VAL=<value>"
+  },
+  "ACCELEROMETER_MEASURE": {
+    "description": "Starts accelerometer measurements at the requested number of samples per second. If CHIP is not specified it defaults to \"adxl345\". The command works in a start-stop mode: when executed for the first time, it starts the measurements, next execution stops them. The results of measurements are written to a file named `/tmp/adxl345-<chip>-<name>.csv` where `<chip>` is the name of the accelerometer chip (`my_chip_name` from `[adxl345 my_chip_name]`) and `<name>` is the optional NAME parameter. If NAME is not specified it defaults to the current time in \"YYYYMMDD_HHMMSS\" format. If the accelerometer does not have a name in its config section (simply `[adxl345]`) then `<chip>` part of the name is not generated.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": true
+      },
+      {
+        "name": "NAME",
+        "optional": true
+      }
+    ],
+    "syntax": "ACCELEROMETER_MEASURE [CHIP=<config_name>] [NAME=<value>]"
+  },
+  "ACCELEROMETER_QUERY": {
+    "description": "queries accelerometer for the current value. If CHIP is not specified it defaults to \"adxl345\". If RATE is not specified, the default value is used. This command is useful to test the connection to the ADXL345 accelerometer: one of the returned values should be a free-fall acceleration (+/- some noise of the chip).",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": true
+      },
+      {
+        "name": "RATE",
+        "optional": true
+      }
+    ],
+    "syntax": "ACCELEROMETER_QUERY [CHIP=<config_name>] [RATE=<value>]"
+  },
+  "ACTIVATE_EXTRUDER": {
+    "description": "In a printer with multiple [extruder](Config_Reference.md#extruder) config sections, this command changes the active hotend.",
+    "params": [
+      {
+        "name": "EXTRUDER",
+        "optional": false
+      }
+    ],
+    "syntax": "ACTIVATE_EXTRUDER EXTRUDER=<config_name>"
+  },
+  "ANGLE_CALIBRATE": {
+    "description": "Perform angle calibration on the given sensor (there must be an `[angle chip_name]` config section that has specified a `stepper` parameter). IMPORTANT - this tool will command the stepper motor to move without checking the normal kinematic boundary limits. Ideally the motor should be disconnected from any printer carriage before performing calibration. If the stepper can not be disconnected from the printer, make sure the carriage is near the center of its rail before starting calibration. (The stepper motor may move forwards or backwards two full rotations during this test.) After completing this test use the `SAVE_CONFIG` command to save the calibration data to the config file. In order to use this tool the Python \"numpy\" package must be installed (see the [measuring resonance document](Measuring_Resonances.md#software-installation) for more information).",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": false
+      }
+    ],
+    "syntax": "ANGLE_CALIBRATE CHIP=<chip_name>"
+  },
+  "ANGLE_CHIP_CALIBRATE": {
+    "description": "Perform internal sensor calibration, if implemented (MT6826S/MT6835).",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": false
+      }
+    ],
+    "syntax": "ANGLE_CHIP_CALIBRATE CHIP=<chip_name>"
+  },
+  "ANGLE_DEBUG_READ": {
+    "description": "Queries sensor register \"register\" (e.g. 44 or 0x2C). Can be useful for debugging purposes. This is only available for tle5012b chips.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": false
+      },
+      {
+        "name": "REG",
+        "optional": false
+      }
+    ],
+    "syntax": "ANGLE_DEBUG_READ CHIP=<config_name> REG=<register>"
+  },
+  "ANGLE_DEBUG_WRITE": {
+    "description": "Writes raw \"value\" into register \"register\". Both \"value\" and \"register\" can be a decimal or a hexadecimal integer. Use with care, and refer to sensor data sheet for the reference. This is only available for tle5012b chips.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": false
+      },
+      {
+        "name": "REG",
+        "optional": false
+      },
+      {
+        "name": "VAL",
+        "optional": false
+      }
+    ],
+    "syntax": "ANGLE_DEBUG_WRITE CHIP=<config_name> REG=<register> VAL=<value>"
+  },
+  "AXIS_TWIST_COMPENSATION_CALIBRATE": {
+    "description": "Calibrates axis twist compensation by specifying the target axis or enabling automatic calibration.",
+    "params": [
+      {
+        "name": "AXIS",
+        "optional": true
+      },
+      {
+        "name": "SAMPLE_COUNT",
+        "optional": true
+      }
+    ],
+    "syntax": "AXIS_TWIST_COMPENSATION_CALIBRATE [AXIS=<X|Y>] [SAMPLE_COUNT=<value>]"
+  },
+  "BED_MESH_CALIBRATE": {
+    "description": "This command probes the bed using generated points specified by the parameters in the config. After probing, a mesh is generated and z-movement is adjusted according to the mesh. The mesh is immediately active after successful completion of `BED_MESH_CALIBRATE`. The mesh will be saved into a profile specified by the `PROFILE` parameter, or `default` if unspecified. If ADAPTIVE=1 is specified then the profile name will begin with `adaptive-` and should not be saved for reuse. See the PROBE command for details on the optional probe parameters. If METHOD=manual is specified then the manual probing tool is activated - see the MANUAL_PROBE command above for details on the additional commands available while this tool is active. The optional `HORIZONTAL_MOVE_Z` value overrides the `horizontal_move_z` option specified in the config file. If ADAPTIVE=1 is specified then the objects defined by the Gcode file being printed will be used to define the probed area. The optional `ADAPTIVE_MARGIN` value overrides the `adaptive_margin` option specified in the config file.",
+    "params": [
+      {
+        "name": "PROFILE",
+        "optional": true
+      },
+      {
+        "name": "METHOD",
+        "optional": true
+      },
+      {
+        "name": "HORIZONTAL_MOVE_Z",
+        "optional": true
+      },
+      {
+        "name": "ADAPTIVE",
+        "optional": true
+      },
+      {
+        "name": "ADAPTIVE_MARGIN",
+        "optional": true
+      }
+    ],
+    "syntax": "BED_MESH_CALIBRATE [PROFILE=<name>] [METHOD=manual] [HORIZONTAL_MOVE_Z=<value>] [<probe_parameter>=<value>] [<mesh_parameter>=<value>] [ADAPTIVE=1] [ADAPTIVE_MARGIN=<value>]"
+  },
+  "BED_MESH_CLEAR": {
+    "description": "This command clears the mesh and removes all z adjustment. It is recommended to put this in your end-gcode.",
+    "params": [],
+    "syntax": "BED_MESH_CLEAR"
+  },
+  "BED_MESH_MAP": {
+    "description": "Like to BED_MESH_OUTPUT, this command prints the current state of the mesh to the terminal. Instead of printing the values in a human readable format, the state is serialized in json format. This allows octoprint plugins to easily capture the data and generate height maps approximating the bed's surface.",
+    "params": [],
+    "syntax": "BED_MESH_MAP"
+  },
+  "BED_MESH_OFFSET": {
+    "description": "Applies X, Y, and/or ZFADE offsets to the mesh lookup. This is useful for printers with independent extruders, as an offset is necessary to produce correct Z adjustment after a tool change. Note that a ZFADE offset does not apply additional z-adjustment directly, it is used to correct the `fade` calculation when a `gcode offset` has been applied to the Z axis.",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "ZFADE",
+        "optional": true
+      }
+    ],
+    "syntax": "BED_MESH_OFFSET [X=<value>] [Y=<value>] [ZFADE=<value]"
+  },
+  "BED_MESH_OUTPUT": {
+    "description": "This command outputs the current probed z values and current mesh values to the terminal. If PGP=1 is specified the X, Y coordinates generated by bed_mesh, along with their associated indices, will be output to the terminal.",
+    "params": [
+      {
+        "name": "PGP",
+        "optional": false
+      }
+    ],
+    "syntax": "BED_MESH_OUTPUT PGP=[<0:1>]"
+  },
+  "BED_MESH_PROFILE": {
+    "description": "This command provides profile management for mesh state. LOAD will restore the mesh state from the profile matching the supplied name. SAVE will save the current mesh state to a profile matching the supplied name. Remove will delete the profile matching the supplied name from persistent memory. Note that after SAVE or REMOVE operations have been run the SAVE_CONFIG gcode must be run to make the changes to persistent memory permanent.",
+    "params": [
+      {
+        "name": "LOAD",
+        "optional": false
+      },
+      {
+        "name": "SAVE",
+        "optional": false
+      },
+      {
+        "name": "REMOVE",
+        "optional": false
+      }
+    ],
+    "syntax": "BED_MESH_PROFILE LOAD=<name> SAVE=<name> REMOVE=<name>"
+  },
+  "BED_SCREWS_ADJUST": {
+    "description": "This command will invoke the bed screws adjustment tool. It will command the nozzle to different locations (as defined in the config file) and allow one to make adjustments to the bed screws so that the bed is a constant distance from the nozzle.",
+    "params": [],
+    "syntax": "BED_SCREWS_ADJUST"
+  },
+  "BED_TILT_CALIBRATE": {
+    "description": "This command will probe the points specified in the config and then recommend updated x and y tilt adjustments. See the PROBE command for details on the optional probe parameters. If METHOD=manual is specified then the manual probing tool is activated - see the MANUAL_PROBE command above for details on the additional commands available while this tool is active. The optional `HORIZONTAL_MOVE_Z` value overrides the `horizontal_move_z` option specified in the config file.",
+    "params": [
+      {
+        "name": "METHOD",
+        "optional": true
+      },
+      {
+        "name": "HORIZONTAL_MOVE_Z",
+        "optional": true
+      }
+    ],
+    "syntax": "BED_TILT_CALIBRATE [METHOD=manual] [HORIZONTAL_MOVE_Z=<value>] [<probe_parameter>=<value>]"
+  },
+  "BLTOUCH_DEBUG": {
+    "description": "This sends a command to the BLTouch. It may be useful for debugging. Available commands are: `pin_down`, `touch_mode`, `pin_up`, `self_test`, `reset`. A BL-Touch V3.0 or V3.1 may also support `set_5V_output_mode`, `set_OD_output_mode`, `output_mode_store` commands.",
+    "params": [
+      {
+        "name": "COMMAND",
+        "optional": false
+      }
+    ],
+    "syntax": "BLTOUCH_DEBUG COMMAND=<command>"
+  },
+  "BLTOUCH_STORE": {
+    "description": "This stores an output mode in the EEPROM of a BLTouch V3.1 Available output_modes are: `5V`, `OD`",
+    "params": [
+      {
+        "name": "MODE",
+        "optional": false
+      }
+    ],
+    "syntax": "BLTOUCH_STORE MODE=<output_mode>"
+  },
+  "CALC_MEASURED_SKEW": {
+    "description": "Calculates and reports the skew (in radians and degrees) based on a measured print. This can be useful for determining the printer's current skew after correction has been applied. It may also be useful before correction is applied to determine if skew correction is necessary. See [Skew Correction](Skew_Correction.md) for details on skew calibration objects and measurements.",
+    "params": [
+      {
+        "name": "AC",
+        "optional": true
+      },
+      {
+        "name": "BD",
+        "optional": true
+      },
+      {
+        "name": "AD",
+        "optional": true
+      }
+    ],
+    "syntax": "CALC_MEASURED_SKEW [AC=<ac_length>] [BD=<bd_length>] [AD=<ad_length>]"
+  },
+  "CANCEL_PRINT": {
+    "description": "Cancels the current print.",
+    "params": [],
+    "syntax": "CANCEL_PRINT"
+  },
+  "CLEAR_PAUSE": {
+    "description": "Clears the current paused state without resuming the print. This is useful if one decides to cancel a print after a PAUSE. It is recommended to add this to your start gcode to make sure the paused state is fresh for each print.",
+    "params": [],
+    "syntax": "CLEAR_PAUSE"
+  },
+  "DELTA_ANALYZE": {
+    "description": "This command is used during enhanced delta calibration. See [Delta Calibrate](Delta_Calibrate.md) for details.",
+    "params": [],
+    "syntax": "DELTA_ANALYZE"
+  },
+  "DELTA_CALIBRATE": {
+    "description": "This command will probe seven points on the bed and recommend updated endstop positions, tower angles, and radius. See the PROBE command for details on the optional probe parameters. If METHOD=manual is specified then the manual probing tool is activated - see the MANUAL_PROBE command above for details on the additional commands available while this tool is active. The optional `HORIZONTAL_MOVE_Z` value overrides the `horizontal_move_z` option specified in the config file.",
+    "params": [
+      {
+        "name": "METHOD",
+        "optional": true
+      },
+      {
+        "name": "HORIZONTAL_MOVE_Z",
+        "optional": true
+      }
+    ],
+    "syntax": "DELTA_CALIBRATE [METHOD=manual] [HORIZONTAL_MOVE_Z=<value>] [<probe_parameter>=<value>]"
+  },
+  "DISABLE_FILAMENT_WIDTH_LOG": {
+    "description": "Turn off diameter logging.",
+    "params": [],
+    "syntax": "DISABLE_FILAMENT_WIDTH_LOG"
+  },
+  "DISABLE_FILAMENT_WIDTH_SENSOR": {
+    "description": "Turn off the filament width sensor and stop using it for flow compensation. Resets flow rate to 100%.",
+    "params": [],
+    "syntax": "DISABLE_FILAMENT_WIDTH_SENSOR"
+  },
+  "DUMP_TMC": {
+    "description": "This command will read all TMC driver registers and report their values. If a REGISTER is provided, only the specified register will be dumped.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "REGISTER",
+        "optional": true
+      }
+    ],
+    "syntax": "DUMP_TMC STEPPER=<name> [REGISTER=<name>]"
+  },
+  "ENABLE_FILAMENT_WIDTH_LOG": {
+    "description": "Turn on diameter logging.",
+    "params": [],
+    "syntax": "ENABLE_FILAMENT_WIDTH_LOG"
+  },
+  "ENABLE_FILAMENT_WIDTH_SENSOR": {
+    "description": "Turn on the filament width sensor and enable or disable flow compensation. If `FLOW_COMPENSATION` is not specified, the current flow compensation state is preserved.",
+    "params": [
+      {
+        "name": "FLOW_COMPENSATION",
+        "optional": true
+      }
+    ],
+    "syntax": "ENABLE_FILAMENT_WIDTH_SENSOR [FLOW_COMPENSATION=[0|1]"
+  },
+  "ENDSTOP_PHASE_CALIBRATE": {
+    "description": "If no STEPPER parameter is provided then this command will reports statistics on endstop stepper phases during past homing operations. When a STEPPER parameter is provided it arranges for the given endstop phase setting to be written to the config file (in conjunction with the SAVE_CONFIG command).",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": true
+      }
+    ],
+    "syntax": "ENDSTOP_PHASE_CALIBRATE [STEPPER=<config_name>]"
+  },
+  "EXCLUDE_OBJECT": {
+    "description": "With no parameters, this will return a list of all currently excluded objects.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "CURRENT",
+        "optional": true
+      },
+      {
+        "name": "RESET",
+        "optional": true
+      }
+    ],
+    "syntax": "EXCLUDE_OBJECT [NAME=object_name] [CURRENT=1] [RESET=1]"
+  },
+  "EXCLUDE_OBJECT_DEFINE": {
+    "description": "Provides a summary of an object in the file.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "CENTER",
+        "optional": true
+      },
+      {
+        "name": "POLYGON",
+        "optional": true
+      },
+      {
+        "name": "RESET",
+        "optional": true
+      },
+      {
+        "name": "JSON",
+        "optional": true
+      }
+    ],
+    "syntax": "EXCLUDE_OBJECT_DEFINE [NAME=object_name [CENTER=X,Y] [POLYGON=[[x,y],...]] [RESET=1] [JSON=1]"
+  },
+  "EXCLUDE_OBJECT_END": {
+    "description": "Denotes the end of the object's gcode for the layer. It is paired with `EXCLUDE_OBJECT_START`. A `NAME` parameter is optional, and will only warn when the provided name does not match the current object.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      }
+    ],
+    "syntax": "EXCLUDE_OBJECT_END [NAME=object_name]"
+  },
+  "EXCLUDE_OBJECT_START": {
+    "description": "This command takes a `NAME` parameter and denotes the start of the gcode for an object on the current layer.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": false
+      }
+    ],
+    "syntax": "EXCLUDE_OBJECT_START NAME=object_name"
+  },
+  "FIRMWARE_RESTART": {
+    "description": "This is similar to a RESTART command, but it also clears any error state from the micro-controller.",
+    "params": [],
+    "syntax": "FIRMWARE_RESTART"
+  },
+  "FORCE_MOVE": {
+    "description": "This command will forcibly move the given stepper the given distance (in mm) at the given constant velocity (in mm/s). If ACCEL is specified and is greater than zero, then the given acceleration (in mm/s^2) will be used; otherwise no acceleration is performed. No boundary checks are performed; no kinematic updates are made; other parallel steppers on an axis will not be moved. Use caution as an incorrect command could cause damage! Using this command will almost certainly place the low-level kinematics in an incorrect state; issue a G28 afterwards to reset the kinematics. This command is intended for low-level diagnostics and debugging.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "DISTANCE",
+        "optional": false
+      },
+      {
+        "name": "VELOCITY",
+        "optional": false
+      },
+      {
+        "name": "ACCEL",
+        "optional": true
+      }
+    ],
+    "syntax": "FORCE_MOVE STEPPER=<config_name> DISTANCE=<value> VELOCITY=<value> [ACCEL=<value>]"
+  },
+  "G0": {
+    "description": "Move (G0 or G1)",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      },
+      {
+        "name": "E",
+        "optional": true
+      },
+      {
+        "name": "F",
+        "optional": true
+      }
+    ],
+    "syntax": "G1 [X<pos>] [Y<pos>] [Z<pos>] [E<pos>] [F<speed>]"
+  },
+  "G1": {
+    "description": "Move (G0 or G1)",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      },
+      {
+        "name": "E",
+        "optional": true
+      },
+      {
+        "name": "F",
+        "optional": true
+      }
+    ],
+    "syntax": "G1 [X<pos>] [Y<pos>] [Z<pos>] [E<pos>] [F<speed>]"
+  },
+  "G10": {
+    "description": "Retracts the extruder using the currently configured parameters.",
+    "params": [],
+    "syntax": "G10"
+  },
+  "G11": {
+    "description": "Unretracts the extruder using the currently configured parameters.",
+    "params": [],
+    "syntax": "G11"
+  },
+  "G28": {
+    "description": "Move to origin",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      }
+    ],
+    "syntax": "G28 [X] [Y] [Z]"
+  },
+  "G2|G3": {
+    "description": "Arc Move Clockwise (G2), Arc Move Counter-clockwise (G3)",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      },
+      {
+        "name": "E",
+        "optional": true
+      },
+      {
+        "name": "F",
+        "optional": true
+      },
+      {
+        "name": "I",
+        "optional": false
+      },
+      {
+        "name": "J",
+        "optional": false
+      },
+      {
+        "name": "K",
+        "optional": false
+      }
+    ],
+    "syntax": "G2|G3 [X<pos>] [Y<pos>] [Z<pos>] [E<pos>] [F<speed>] I<value> J<value>|I<value> K<value>|J<value> K<value>"
+  },
+  "G4": {
+    "description": "Dwell",
+    "params": [
+      {
+        "name": "P",
+        "optional": false
+      }
+    ],
+    "syntax": "G4 P<milliseconds>"
+  },
+  "G90": {
+    "description": "Use absolute/relative coordinates",
+    "params": [],
+    "syntax": "G90"
+  },
+  "G91": {
+    "description": "Use absolute/relative coordinates",
+    "params": [],
+    "syntax": "G91"
+  },
+  "G92": {
+    "description": "Set position",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      },
+      {
+        "name": "E",
+        "optional": true
+      }
+    ],
+    "syntax": "G92 [X<pos>] [Y<pos>] [Z<pos>] [E<pos>]"
+  },
+  "GET_CURRENT_SKEW": {
+    "description": "Reports the current printer skew for each plane in both radians and degrees. The skew is calculated based on parameters provided via the `SET_SKEW` gcode.",
+    "params": [],
+    "syntax": "GET_CURRENT_SKEW"
+  },
+  "GET_POSITION": {
+    "description": "Return information on the current location of the toolhead. See the developer documentation of [GET_POSITION output](Code_Overview.md#coordinate-systems) for more information.",
+    "params": [],
+    "syntax": "GET_POSITION"
+  },
+  "GET_RETRACTION": {
+    "description": "Queries the current parameters used by firmware retraction and displays them on the terminal.",
+    "params": [],
+    "syntax": "GET_RETRACTION"
+  },
+  "HELP": {
+    "description": "Report the list of available extended G-Code commands.",
+    "params": [],
+    "syntax": "HELP"
+  },
+  "INIT_TMC": {
+    "description": "This command will initialize the TMC registers. Needed to re-enable the driver if power to the chip is turned off then back on.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      }
+    ],
+    "syntax": "INIT_TMC STEPPER=<name>"
+  },
+  "LDC_CALIBRATE_DRIVE_CURRENT": {
+    "description": "This tool will calibrate the ldc1612 DRIVE_CURRENT0 register. Prior to using this tool, move the sensor so that it is near the center of the bed and about 20mm above the bed surface. Run this command to determine an appropriate DRIVE_CURRENT for the sensor. After running this command use the SAVE_CONFIG command to store that new setting in the printer.cfg config file.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": false
+      }
+    ],
+    "syntax": "LDC_CALIBRATE_DRIVE_CURRENT CHIP=<config_name>"
+  },
+  "M104": {
+    "description": "Set extruder temperature",
+    "params": [
+      {
+        "name": "T",
+        "optional": true
+      },
+      {
+        "name": "S",
+        "optional": true
+      }
+    ],
+    "syntax": "M104 [T<index>] [S<temperature>]"
+  },
+  "M105": {
+    "description": "Get extruder temperature",
+    "params": [],
+    "syntax": "M105"
+  },
+  "M106": {
+    "description": "Set fan speed",
+    "params": [
+      {
+        "name": "S",
+        "optional": false
+      }
+    ],
+    "syntax": "M106 S<value>"
+  },
+  "M107": {
+    "description": "Turn fan off",
+    "params": [],
+    "syntax": "M107"
+  },
+  "M109": {
+    "description": "Set extruder temperature and wait",
+    "params": [
+      {
+        "name": "T",
+        "optional": true
+      },
+      {
+        "name": "S",
+        "optional": false
+      }
+    ],
+    "syntax": "M109 [T<index>] S<temperature>"
+  },
+  "M112": {
+    "description": "Emergency stop",
+    "params": [],
+    "syntax": "M112"
+  },
+  "M114": {
+    "description": "Get current position",
+    "params": [],
+    "syntax": "M114"
+  },
+  "M115": {
+    "description": "Get firmware version",
+    "params": [],
+    "syntax": "M115"
+  },
+  "M117": {
+    "description": "Display Message",
+    "params": [],
+    "syntax": "M117 <message>"
+  },
+  "M118": {
+    "description": "echo the message prepended with the configured default prefix (or `echo: ` if no prefix is configured).",
+    "params": [],
+    "syntax": "M118 <message>"
+  },
+  "M140": {
+    "description": "Set bed temperature",
+    "params": [
+      {
+        "name": "S",
+        "optional": true
+      }
+    ],
+    "syntax": "M140 [S<temperature>]"
+  },
+  "M18": {
+    "description": "Turn off motors",
+    "params": [],
+    "syntax": "M18"
+  },
+  "M190": {
+    "description": "Set bed temperature and wait",
+    "params": [
+      {
+        "name": "S",
+        "optional": false
+      }
+    ],
+    "syntax": "M190 S<temperature>"
+  },
+  "M20": {
+    "description": "List SD card",
+    "params": [],
+    "syntax": "M20"
+  },
+  "M204": {
+    "description": "Set acceleration",
+    "params": [
+      {
+        "name": "P",
+        "optional": false
+      },
+      {
+        "name": "T",
+        "optional": false
+      }
+    ],
+    "syntax": "M204 P<value> T<value>"
+  },
+  "M21": {
+    "description": "Initialize SD card",
+    "params": [],
+    "syntax": "M21"
+  },
+  "M220": {
+    "description": "Set speed factor override percentage",
+    "params": [
+      {
+        "name": "S",
+        "optional": false
+      }
+    ],
+    "syntax": "M220 S<percent>"
+  },
+  "M221": {
+    "description": "Set extrude factor override percentage",
+    "params": [
+      {
+        "name": "S",
+        "optional": false
+      }
+    ],
+    "syntax": "M221 S<percent>"
+  },
+  "M23": {
+    "description": "Select SD file",
+    "params": [],
+    "syntax": "M23 <filename>"
+  },
+  "M24": {
+    "description": "Start/resume SD print",
+    "params": [],
+    "syntax": "M24"
+  },
+  "M25": {
+    "description": "Pause SD print",
+    "params": [],
+    "syntax": "M25"
+  },
+  "M26": {
+    "description": "Set SD position",
+    "params": [
+      {
+        "name": "S",
+        "optional": false
+      }
+    ],
+    "syntax": "M26 S<offset>"
+  },
+  "M27": {
+    "description": "Report SD print status",
+    "params": [],
+    "syntax": "M27"
+  },
+  "M400": {
+    "description": "Wait for current moves to finish",
+    "params": [],
+    "syntax": "M400"
+  },
+  "M73": {
+    "description": "Set build percentage",
+    "params": [
+      {
+        "name": "P",
+        "optional": false
+      }
+    ],
+    "syntax": "M73 P<percent>"
+  },
+  "M82": {
+    "description": "Use absolute/relative distances for extrusion",
+    "params": [],
+    "syntax": "M82"
+  },
+  "M83": {
+    "description": "Use absolute/relative distances for extrusion",
+    "params": [],
+    "syntax": "M83"
+  },
+  "M84": {
+    "description": "Turn off motors",
+    "params": [],
+    "syntax": "M84"
+  },
+  "MANUAL_PROBE": {
+    "description": "Run a helper script useful for measuring the height of the nozzle at a given location. If SPEED is specified, it sets the speed of TESTZ commands (the default is 5mm/s). During a manual probe, the following additional commands are available: - `ACCEPT`: This command accepts the current Z position and concludes the manual probing tool. - `ABORT`: This command terminates the manual probing tool. - `TESTZ Z=<value>`: This command moves the nozzle up or down by the amount specified in \"value\". For example, `TESTZ Z=-.1` would move the nozzle down .1mm while `TESTZ Z=.1` would move the nozzle up .1mm. The value may also be `+`, `-`, `++`, or `--` to move the nozzle up or down an amount relative to previous attempts.",
+    "params": [
+      {
+        "name": "SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "MANUAL_PROBE [SPEED=<speed>]"
+  },
+  "MANUAL_STEPPER": {
+    "description": "This command will alter the state of the stepper. Use the ENABLE parameter to enable/disable the stepper. Use the SET_POSITION parameter to force the stepper to think it is at the given position. Use the MOVE parameter to request a movement to the given position. If SPEED and/or ACCEL is specified then the given values will be used instead of the defaults specified in the config file. If an ACCEL of zero is specified then no acceleration will be performed. Normally future G-Code commands will be scheduled to run after the stepper move completes, however if a manual stepper move uses SYNC=0 then future G-Code movement commands may run in parallel with the stepper movement.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "ENABLE",
+        "optional": true
+      },
+      {
+        "name": "SET_POSITION",
+        "optional": true
+      },
+      {
+        "name": "SPEED",
+        "optional": true
+      },
+      {
+        "name": "ACCEL",
+        "optional": true
+      },
+      {
+        "name": "MOVE",
+        "optional": true
+      },
+      {
+        "name": "SYNC",
+        "optional": true
+      }
+    ],
+    "syntax": "MANUAL_STEPPER STEPPER=config_name [ENABLE=[0|1]] [SET_POSITION=<pos>] [SPEED=<speed>] [ACCEL=<accel>] [MOVE=<pos>] [SYNC=0]]"
+  },
+  "MEASURE_AXES_NOISE": {
+    "description": "Measures and outputs the noise for all axes of all enabled accelerometer chips.",
+    "params": [],
+    "syntax": "MEASURE_AXES_NOISE"
+  },
+  "METHOD=<scan|rapid_scan|tap>": {
+    "description": "This alters the probing mechanism:",
+    "params": [
+      {
+        "name": "METHOD",
+        "optional": false
+      }
+    ],
+    "syntax": "METHOD=<scan|rapid_scan|tap>"
+  },
+  "METHOD=rapid_scan": {
+    "description": "The toolhead does not descend and does not pause at each target location. The value returned is the measured height around the time that the toolhead was near each target position.",
+    "params": [
+      {
+        "name": "METHOD",
+        "optional": false
+      }
+    ],
+    "syntax": "METHOD=rapid_scan"
+  },
+  "METHOD=scan": {
+    "description": "The toolhead does not descend. Instead the toolhead will pause briefly above each target location and return the measured height at that position.",
+    "params": [
+      {
+        "name": "METHOD",
+        "optional": false
+      }
+    ],
+    "syntax": "METHOD=scan"
+  },
+  "METHOD=tap": {
+    "description": "The toolhead will descend until the nozzle makes contact with the bed. This method is only available if `tap_threshold` is specified in the `[probe_eddy_current]` config section.",
+    "params": [
+      {
+        "name": "METHOD",
+        "optional": false
+      }
+    ],
+    "syntax": "METHOD=tap"
+  },
+  "PALETTE_CLEAR": {
+    "description": "This command instructs the Palette 2 to clear all of the input and output paths of filament.",
+    "params": [],
+    "syntax": "PALETTE_CLEAR"
+  },
+  "PALETTE_CONNECT": {
+    "description": "This command initializes the connection with the Palette 2.",
+    "params": [],
+    "syntax": "PALETTE_CONNECT"
+  },
+  "PALETTE_CUT": {
+    "description": "This command instructs the Palette 2 to cut the filament currently loaded in the splice core.",
+    "params": [],
+    "syntax": "PALETTE_CUT"
+  },
+  "PALETTE_DISCONNECT": {
+    "description": "This command disconnects from the Palette 2.",
+    "params": [],
+    "syntax": "PALETTE_DISCONNECT"
+  },
+  "PALETTE_SMART_LOAD": {
+    "description": "This command start the smart load sequence on the Palette 2. Filament is loaded automatically by extruding it the distance calibrated on the device for the printer, and instructs the Palette 2 once the loading has been completed. This command is the same as pressing **Smart Load** directly on the Palette 2 screen after the filament load is complete.",
+    "params": [],
+    "syntax": "PALETTE_SMART_LOAD"
+  },
+  "PAUSE": {
+    "description": "Pauses the current print. The current position is captured for restoration upon resume.",
+    "params": [],
+    "syntax": "PAUSE"
+  },
+  "PID_CALIBRATE": {
+    "description": "Perform a PID calibration test. The specified heater will be enabled until the specified target temperature is reached, and then the heater will be turned off and on for several cycles. If the WRITE_FILE parameter is enabled, then the file /tmp/heattest.txt will be created with a log of all temperature samples taken during the test.",
+    "params": [
+      {
+        "name": "HEATER",
+        "optional": false
+      },
+      {
+        "name": "TARGET",
+        "optional": false
+      },
+      {
+        "name": "WRITE_FILE",
+        "optional": true
+      }
+    ],
+    "syntax": "PID_CALIBRATE HEATER=<config_name> TARGET=<temperature> [WRITE_FILE=1]"
+  },
+  "PROBE": {
+    "description": "Move the nozzle downwards until the probe triggers. If any of the optional parameters are provided they override their equivalent setting in the [probe config section](Config_Reference.md#probe).",
+    "params": [
+      {
+        "name": "PROBE_SPEED",
+        "optional": true
+      },
+      {
+        "name": "LIFT_SPEED",
+        "optional": true
+      },
+      {
+        "name": "SAMPLES",
+        "optional": true
+      },
+      {
+        "name": "SAMPLE_RETRACT_DIST",
+        "optional": true
+      },
+      {
+        "name": "SAMPLES_TOLERANCE",
+        "optional": true
+      },
+      {
+        "name": "SAMPLES_TOLERANCE_RETRIES",
+        "optional": true
+      },
+      {
+        "name": "SAMPLES_RESULT",
+        "optional": true
+      }
+    ],
+    "syntax": "PROBE [PROBE_SPEED=<mm/s>] [LIFT_SPEED=<mm/s>] [SAMPLES=<count>] [SAMPLE_RETRACT_DIST=<mm>] [SAMPLES_TOLERANCE=<mm>] [SAMPLES_TOLERANCE_RETRIES=<count>] [SAMPLES_RESULT=median|average]"
+  },
+  "PROBE_ACCURACY": {
+    "description": "Calculate the maximum, minimum, average, median, and standard deviation of multiple probe samples. By default, 10 SAMPLES are taken. Otherwise the optional parameters default to their equivalent setting in the probe config section.",
+    "params": [
+      {
+        "name": "PROBE_SPEED",
+        "optional": true
+      },
+      {
+        "name": "SAMPLES",
+        "optional": true
+      },
+      {
+        "name": "SAMPLE_RETRACT_DIST",
+        "optional": true
+      }
+    ],
+    "syntax": "PROBE_ACCURACY [PROBE_SPEED=<mm/s>] [SAMPLES=<count>] [SAMPLE_RETRACT_DIST=<mm>]"
+  },
+  "PROBE_CALIBRATE": {
+    "description": "Run a helper script useful for calibrating the probe's z_offset. See the PROBE command for details on the optional probe parameters. See the MANUAL_PROBE command for details on the SPEED parameter and the additional commands available while the tool is active. Please note, the PROBE_CALIBRATE command uses the speed variable to move in XY direction as well as Z.",
+    "params": [
+      {
+        "name": "SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "PROBE_CALIBRATE [SPEED=<speed>] [<probe_parameter>=<value>]"
+  },
+  "PROBE_EDDY_CURRENT_CALIBRATE": {
+    "description": "This starts a tool that calibrates the sensor resonance frequencies to corresponding Z heights. The tool will take a couple of minutes to complete. After completion, use the SAVE_CONFIG command to store the results in the printer.cfg file.",
+    "params": [
+      {
+        "name": "CHIP",
+        "optional": false
+      }
+    ],
+    "syntax": "PROBE_EDDY_CURRENT_CALIBRATE CHIP=<config_name>"
+  },
+  "PROBE_EDDY_CURRENT_TAP_CALIBRATE": {
+    "description": "This starts a tool that can calibrate the probe's \"tap_threshold\" parameter. See the [eddy probe documentation](Eddy_Probe.md#tap-calibration) for details.",
+    "params": [
+      {
+        "name": "TAP",
+        "optional": true
+      }
+    ],
+    "syntax": "PROBE_EDDY_CURRENT_TAP_CALIBRATE [TAP=guess|refine|verify]"
+  },
+  "QUAD_GANTRY_LEVEL": {
+    "description": "This command will probe the points specified in the config and then make independent adjustments to each Z stepper to compensate for tilt. See the PROBE command for details on the optional probe parameters. The optional `RETRIES`, `RETRY_TOLERANCE`, and `HORIZONTAL_MOVE_Z` values override those options specified in the config file.",
+    "params": [
+      {
+        "name": "RETRIES",
+        "optional": true
+      },
+      {
+        "name": "RETRY_TOLERANCE",
+        "optional": true
+      },
+      {
+        "name": "HORIZONTAL_MOVE_Z",
+        "optional": true
+      }
+    ],
+    "syntax": "QUAD_GANTRY_LEVEL [RETRIES=<value>] [RETRY_TOLERANCE=<value>] [HORIZONTAL_MOVE_Z=<value>] [<probe_parameter>=<value>]"
+  },
+  "QUERY_ADC": {
+    "description": "Report the last analog value received for a configured analog pin. If NAME is not provided, the list of available adc names are reported. If PULLUP is provided (as a value in Ohms), the raw analog value along with the equivalent resistance given that pullup is reported.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "PULLUP",
+        "optional": true
+      }
+    ],
+    "syntax": "QUERY_ADC [NAME=<config_name>] [PULLUP=<value>]"
+  },
+  "QUERY_ENDSTOPS": {
+    "description": "Probe the axis endstops and report if they are \"triggered\" or in an \"open\" state. This command is typically used to verify that an endstop is working correctly.",
+    "params": [],
+    "syntax": "QUERY_ENDSTOPS"
+  },
+  "QUERY_FILAMENT_SENSOR": {
+    "description": "Queries the current status of the filament sensor. The data displayed on the terminal will depend on the sensor type defined in the configuration.",
+    "params": [
+      {
+        "name": "SENSOR",
+        "optional": false
+      }
+    ],
+    "syntax": "QUERY_FILAMENT_SENSOR SENSOR=<sensor_name>"
+  },
+  "QUERY_FILAMENT_WIDTH": {
+    "description": "Return the current measured filament width, the state of the width sensor, the state of the filament sensor and the state of flow compensation.",
+    "params": [],
+    "syntax": "QUERY_FILAMENT_WIDTH"
+  },
+  "QUERY_PROBE": {
+    "description": "Report the current status of the probe (\"triggered\" or \"open\").",
+    "params": [],
+    "syntax": "QUERY_PROBE"
+  },
+  "QUERY_RAW_FILAMENT_WIDTH": {
+    "description": "Return the current ADC channel readings and RAW sensor value for calibration points.",
+    "params": [],
+    "syntax": "QUERY_RAW_FILAMENT_WIDTH"
+  },
+  "RESET_FILAMENT_WIDTH_SENSOR": {
+    "description": "Clear all sensor readings. Helpful after filament change. Resets flow rate to 100%.",
+    "params": [],
+    "syntax": "RESET_FILAMENT_WIDTH_SENSOR"
+  },
+  "RESET_SMART_EFFECTOR": {
+    "description": "Resets Smart Effector sensitivity to its factory settings. Requires `control_pin` to be provided in the config section.",
+    "params": [],
+    "syntax": "RESET_SMART_EFFECTOR"
+  },
+  "RESPOND": {
+    "description": "echo the message prepended with the configured default prefix (or `echo: ` if no prefix is configured). / echo the message prepended with `echo: `. / echo the message prepended with `echo:` without a space between prefix and message, helpful for compatibility with some octoprint plugins that expect very specific formatting. / echo the message prepended with `// `.  OctoPrint can be configured to respond to these messages (e.g.  `RESPOND TYPE=command MSG=action:pause`). / echo the message prepended with `!! `. / echo the message prepended with `<prefix>`. (The `PREFIX` parameter will take priority over the `TYPE` parameter)",
+    "params": [
+      {
+        "name": "MSG",
+        "optional": false
+      },
+      {
+        "name": "TYPE",
+        "optional": false
+      },
+      {
+        "name": "PREFIX",
+        "optional": false
+      }
+    ],
+    "syntax": "RESPOND MSG=\"<message>\"\nRESPOND TYPE=echo MSG=\"<message>\"\nRESPOND TYPE=echo_no_space MSG=\"<message>\"\nRESPOND TYPE=command MSG=\"<message>\"\nRESPOND TYPE=error MSG=\"<message>\"\nRESPOND PREFIX=<prefix> MSG=\"<message>\""
+  },
+  "RESTART": {
+    "description": "This will cause the host software to reload its config and perform an internal reset. This command will not clear error state from the micro-controller (see FIRMWARE_RESTART) nor will it load new software (see [the FAQ](FAQ.md#how-do-i-upgrade-to-the-latest-software)).",
+    "params": [],
+    "syntax": "RESTART"
+  },
+  "RESTORE_DUAL_CARRIAGE_STATE": {
+    "description": "Restore the previously saved states of all dual and their primary carriages. This command restores the modes of the carriages and moves them to their previously saved positions, unless \"MOVE=0\" is specified. If positions are being restored and \"MOVE_SPEED\" is specified, then the carriages will move with at most the provided speed (in mm/s); otherwise the homing speeds of the corresponding carriages will be used as a reference. Note that the carriages restore their positions only over their own axes, which may be necessary to correctly restore COPY and MIRROR mode of the dual carriage. In addition, this command updates the Klipper toolhead position for each axis that has some dual carriages: it is set to match the actual position of the activated primary carriage of an axis or, if an axis does not have a saved primary carriage, to the axis position when `SAVE_DUAL_CARRIAGE_STATE` command was called.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "MOVE",
+        "optional": true
+      },
+      {
+        "name": "MOVE_SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "RESTORE_DUAL_CARRIAGE_STATE [NAME=<state_name>] [MOVE=[0|1] [MOVE_SPEED=<speed>]]"
+  },
+  "RESTORE_GCODE_STATE": {
+    "description": "Restore a state previously saved via SAVE_GCODE_STATE. If \"MOVE=1\" is specified then a toolhead move will be issued to move back to the previous XYZ position. If \"MOVE_SPEED\" is specified then the toolhead move will be performed with the given speed (in mm/s); otherwise the toolhead move will use the restored g-code speed.",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "MOVE",
+        "optional": true
+      },
+      {
+        "name": "MOVE_SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "RESTORE_GCODE_STATE [NAME=<state_name>] [MOVE=1 [MOVE_SPEED=<speed>]]"
+  },
+  "RESUME": {
+    "description": "Resumes the print from a pause, first restoring the previously captured position. The VELOCITY parameter determines the speed at which the tool should return to the original captured position.",
+    "params": [
+      {
+        "name": "VELOCITY",
+        "optional": true
+      }
+    ],
+    "syntax": "RESUME [VELOCITY=<value>]"
+  },
+  "SAMPLE_TIME=<time>": {
+    "description": "When using `METHOD=scan` probing, this specifies the time (in seconds) to pause at each target point. When using `METHOD=rapid_scan` this specifies the measurement time window at each target. If not specified, the default is 0.100 (which is 100ms).",
+    "params": [
+      {
+        "name": "SAMPLE_TIME",
+        "optional": false
+      }
+    ],
+    "syntax": "SAMPLE_TIME=<time>"
+  },
+  "SAVE_CONFIG": {
+    "description": "This command will overwrite the main printer config file and restart the host software. This command is used in conjunction with other calibration commands to store the results of calibration tests.",
+    "params": [],
+    "syntax": "SAVE_CONFIG"
+  },
+  "SAVE_DUAL_CARRIAGE_STATE": {
+    "description": "Save the current positions of the dual carriages and their modes. Saving and restoring DUAL_CARRIAGE state can be useful in scripts and macros, as well as in homing routine overrides. If NAME is provided it allows one to name the saved state to the given string. If NAME is not provided it defaults to \"default\".",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      }
+    ],
+    "syntax": "SAVE_DUAL_CARRIAGE_STATE [NAME=<state_name>]"
+  },
+  "SAVE_GCODE_STATE": {
+    "description": "Save the current g-code coordinate parsing state. Saving and restoring the g-code state is useful in scripts and macros. This command saves the current g-code absolute coordinate mode (G90/G91), absolute extrude mode (M82/M83), origin (G92), offset (SET_GCODE_OFFSET), speed override (M220), extruder override (M221), move speed, current XYZ position, and relative extruder \"E\" position. If NAME is provided it allows one to name the saved state to the given string. If NAME is not provided it defaults to \"default\".",
+    "params": [
+      {
+        "name": "NAME",
+        "optional": true
+      }
+    ],
+    "syntax": "SAVE_GCODE_STATE [NAME=<state_name>]"
+  },
+  "SAVE_VARIABLE": {
+    "description": "Saves the variable to disk so that it can be used across restarts. The VARIABLE must be lowercase. All stored variables are loaded into the `printer.save_variables.variables` dict at startup and can be used in gcode macros. The provided VALUE is parsed as a Python literal.",
+    "params": [
+      {
+        "name": "VARIABLE",
+        "optional": false
+      },
+      {
+        "name": "VALUE",
+        "optional": false
+      }
+    ],
+    "syntax": "SAVE_VARIABLE VARIABLE=<name> VALUE=<value>"
+  },
+  "SCREWS_TILT_CALCULATE": {
+    "description": "This command will invoke the bed screws adjustment tool. It will command the nozzle to different locations (as defined in the config file) probing the z height and calculate the number of knob turns to adjust the bed level. If DIRECTION is specified, the knob turns will all be in the same direction, clockwise (CW) or counterclockwise (CCW). See the PROBE command for details on the optional probe parameters. IMPORTANT: You MUST always do a G28 before using this command. If MAX_DEVIATION is specified, the command will raise a gcode error if any difference in the screw height relative to the base screw height is greater than the value provided. The optional `HORIZONTAL_MOVE_Z` value overrides the `horizontal_move_z` option specified in the config file.",
+    "params": [
+      {
+        "name": "DIRECTION",
+        "optional": true
+      },
+      {
+        "name": "MAX_DEVIATION",
+        "optional": true
+      },
+      {
+        "name": "HORIZONTAL_MOVE_Z",
+        "optional": true
+      }
+    ],
+    "syntax": "SCREWS_TILT_CALCULATE [DIRECTION=CW|CCW] [MAX_DEVIATION=<value>] [HORIZONTAL_MOVE_Z=<value>] [<probe_parameter>=<value>]"
+  },
+  "SDCARD_LOOP_BEGIN": {
+    "description": "Begin a looped section in the SD print. A count of 0 indicates that the section should be looped indefinitely.",
+    "params": [
+      {
+        "name": "COUNT",
+        "optional": false
+      }
+    ],
+    "syntax": "SDCARD_LOOP_BEGIN COUNT=<count>"
+  },
+  "SDCARD_LOOP_DESIST": {
+    "description": "Complete existing loops without further iterations.",
+    "params": [],
+    "syntax": "SDCARD_LOOP_DESIST"
+  },
+  "SDCARD_LOOP_END": {
+    "description": "End a looped section in the SD print.",
+    "params": [],
+    "syntax": "SDCARD_LOOP_END"
+  },
+  "SDCARD_PRINT_FILE": {
+    "description": "Load a file and start SD print.",
+    "params": [
+      {
+        "name": "FILENAME",
+        "optional": false
+      }
+    ],
+    "syntax": "SDCARD_PRINT_FILE FILENAME=<filename>"
+  },
+  "SDCARD_RESET_FILE": {
+    "description": "Unload file and clear SD state.",
+    "params": [],
+    "syntax": "SDCARD_RESET_FILE"
+  },
+  "SET_DIGIPOT": {
+    "description": "This command will change the current value of the digipot. This value should typically be between 0.0 and 1.0, unless a 'scale' is defined in the config. When 'scale' is defined, then this value should be between 0.0 and 'scale'.",
+    "params": [
+      {
+        "name": "DIGIPOT",
+        "optional": false
+      },
+      {
+        "name": "WIPER",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_DIGIPOT DIGIPOT=config_name WIPER=<value>"
+  },
+  "SET_DISPLAY_GROUP": {
+    "description": "Set the active display group of an lcd display. This allows to define multiple display data groups in the config, e.g. `[display_data <group> <elementname>]` and switch between them using this extended gcode command. If DISPLAY is not specified it defaults to \"display\" (the primary display).",
+    "params": [
+      {
+        "name": "DISPLAY",
+        "optional": true
+      },
+      {
+        "name": "GROUP",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_DISPLAY_GROUP [DISPLAY=<display>] GROUP=<group>"
+  },
+  "SET_DISPLAY_TEXT": {
+    "description": "Performs the equivalent of M117, setting the supplied `MSG` as the current display message.  If `MSG` is omitted the display will be cleared.",
+    "params": [
+      {
+        "name": "MSG",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_DISPLAY_TEXT MSG=<message>"
+  },
+  "SET_DUAL_CARRIAGE": {
+    "description": "This command will change the mode of the specified carriage. If no `MODE` is provided it defaults to `PRIMARY`. `<carriage>` must reference a defined primary or dual carriage for `generic_cartesian` kinematics or be 0 (for primary carriage) or 1 (for dual carriage) for all other kinematics supporting IDEX. Setting the mode to `PRIMARY` deactivates all other carriages on the same axis and makes the specified carriage execute subsequent G-Code movement commands as-is. Before activating `COPY` or `MIRROR` mode for a carriage, a different one must be activated as `PRIMARY` on the same axis. When set to either of these two modes, the carriage will track the subsequent G-Code moves and either copy relative movements (in `COPY` mode) or execute them in the opposite (mirror) direction (in `MIRROR` mode). Setting the mode to `INACTIVE` deactivates the carriage and makes it ignore further G-Code moves. Note that deactivating the primary carriage on the axis does not disable other carriages working in `COPY` or `MIRROR` mode, which can be used to disable printing a failed part by any of the tools and park that tool to prevent collisions with an unfinished part, see this [sample configuration](../config/sample-corexyuv.cfg) for macros examples.",
+    "params": [
+      {
+        "name": "CARRIAGE",
+        "optional": false
+      },
+      {
+        "name": "MODE",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_DUAL_CARRIAGE CARRIAGE=<carriage> [MODE=[PRIMARY|COPY|MIRROR|INACTIVE]]"
+  },
+  "SET_EXTRUDER_ROTATION_DISTANCE": {
+    "description": "Set a new value for the provided extruder stepper's \"rotation distance\" (as defined in an [extruder](Config_Reference.md#extruder) or [extruder_stepper](Config_Reference.md#extruder_stepper) config section). If the rotation distance is a negative number then the stepper motion will be inverted (relative to the stepper direction specified in the config file). Changed settings are not retained on Klipper reset. Use with caution as small changes can result in excessive pressure between extruder and hotend. Do proper calibration with filament before use. If 'DISTANCE' value is not provided then this command will return the current rotation distance.",
+    "params": [
+      {
+        "name": "EXTRUDER",
+        "optional": false
+      },
+      {
+        "name": "DISTANCE",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_EXTRUDER_ROTATION_DISTANCE EXTRUDER=<config_name> [DISTANCE=<distance>]"
+  },
+  "SET_FAN_SPEED": {
+    "description": "This command sets the speed of a fan. \"speed\" must be between 0.0 and 1.0.",
+    "params": [
+      {
+        "name": "FAN",
+        "optional": false
+      },
+      {
+        "name": "SPEED",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_FAN_SPEED FAN=config_name SPEED=<speed>"
+  },
+  "SET_FILAMENT_SENSOR": {
+    "description": "Sets the filament sensor on/off. If ENABLE is set to 0, the filament sensor will be disabled, if set to 1 it is enabled.",
+    "params": [
+      {
+        "name": "SENSOR",
+        "optional": false
+      },
+      {
+        "name": "ENABLE",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_FILAMENT_SENSOR SENSOR=<sensor_name> ENABLE=[0|1]"
+  },
+  "SET_GCODE_OFFSET": {
+    "description": "Set a positional offset to apply to future G-Code commands. This is commonly used to virtually change the Z bed offset or to set nozzle XY offsets when switching extruders. For example, if \"SET_GCODE_OFFSET Z=0.2\" is sent, then future G-Code moves will have 0.2mm added to their Z height. If the X_ADJUST style parameters are used, then the adjustment will be added to any existing offset (eg, \"SET_GCODE_OFFSET Z=-0.2\" followed by \"SET_GCODE_OFFSET Z_ADJUST=0.3\" would result in a total Z offset of 0.1). If \"MOVE=1\" is specified then a toolhead move will be issued to apply the given offset (otherwise the offset will take effect on the next absolute G-Code move that specifies the given axis). If \"MOVE_SPEED\" is specified then the toolhead move will be performed with the given speed (in mm/s); otherwise the toolhead move will use the last specified G-Code speed.",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "X_ADJUST",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Y_ADJUST",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      },
+      {
+        "name": "Z_ADJUST",
+        "optional": true
+      },
+      {
+        "name": "MOVE",
+        "optional": true
+      },
+      {
+        "name": "MOVE_SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_GCODE_OFFSET [X=<pos>|X_ADJUST=<adjust>] [Y=<pos>|Y_ADJUST=<adjust>] [Z=<pos>|Z_ADJUST=<adjust>] [MOVE=1 [MOVE_SPEED=<speed>]]"
+  },
+  "SET_GCODE_VARIABLE": {
+    "description": "This command allows one to change the value of a gcode_macro variable at run-time. The provided VALUE is parsed as a Python literal.",
+    "params": [
+      {
+        "name": "MACRO",
+        "optional": false
+      },
+      {
+        "name": "VARIABLE",
+        "optional": false
+      },
+      {
+        "name": "VALUE",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_GCODE_VARIABLE MACRO=<macro_name> VARIABLE=<name> VALUE=<value>"
+  },
+  "SET_HEATER_TEMPERATURE": {
+    "description": "Sets the target temperature for a heater. If a target temperature is not supplied, the target is 0.",
+    "params": [
+      {
+        "name": "HEATER",
+        "optional": false
+      },
+      {
+        "name": "TARGET",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_HEATER_TEMPERATURE HEATER=<heater_name> [TARGET=<target_temperature>]"
+  },
+  "SET_IDLE_TIMEOUT": {
+    "description": "Allows the user to set the idle timeout (in seconds).",
+    "params": [
+      {
+        "name": "TIMEOUT",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_IDLE_TIMEOUT [TIMEOUT=<timeout>]"
+  },
+  "SET_INPUT_SHAPER": {
+    "description": "Modify input shaper parameters. Note that SHAPER_TYPE parameter resets input shaper for all axes even if different shaper types have been configured in [input_shaper] section. SHAPER_TYPE cannot be used together with any of SHAPER_TYPE_X, SHAPER_TYPE_Y, and SHAPER_TYPE_Z parameters. See [config reference](Config_Reference.md#input_shaper) for more details on each of these parameters.",
+    "params": [
+      {
+        "name": "SHAPER_FREQ_X",
+        "optional": true
+      },
+      {
+        "name": "SHAPER_FREQ_Y",
+        "optional": true
+      },
+      {
+        "name": "DAMPING_RATIO_X",
+        "optional": true
+      },
+      {
+        "name": "DAMPING_RATIO_Y",
+        "optional": true
+      },
+      {
+        "name": "DAMPING_RATIO_Z",
+        "optional": true
+      },
+      {
+        "name": "SHAPER_TYPE",
+        "optional": true
+      },
+      {
+        "name": "SHAPER_TYPE_X",
+        "optional": true
+      },
+      {
+        "name": "SHAPER_TYPE_Y",
+        "optional": true
+      },
+      {
+        "name": "SHAPER_TYPE_Z",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_INPUT_SHAPER [SHAPER_FREQ_X=<shaper_freq_x>] [SHAPER_FREQ_Y=<shaper_freq_y>] [SHAPER_FREQ_Y=<shaper_freq_z>] [DAMPING_RATIO_X=<damping_ratio_x>] [DAMPING_RATIO_Y=<damping_ratio_y>] [DAMPING_RATIO_Z=<damping_ratio_z>] [SHAPER_TYPE=<shaper>] [SHAPER_TYPE_X=<shaper_type_x>] [SHAPER_TYPE_Y=<shaper_type_y>] [SHAPER_TYPE_Z=<shaper_type_z>]"
+  },
+  "SET_KINEMATIC_POSITION": {
+    "description": "Force the low-level kinematic code to believe the toolhead is at the given cartesian position and set/clear homed status. This is a diagnostic and debugging command; use SET_GCODE_OFFSET and/or G92 for regular axis transformations. Setting an incorrect or invalid position may lead to internal software errors.",
+    "params": [
+      {
+        "name": "X",
+        "optional": true
+      },
+      {
+        "name": "Y",
+        "optional": true
+      },
+      {
+        "name": "Z",
+        "optional": true
+      },
+      {
+        "name": "SET_HOMED",
+        "optional": true
+      },
+      {
+        "name": "CLEAR_HOMED",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_KINEMATIC_POSITION [X=<value>] [Y=<value>] [Z=<value>] [SET_HOMED=<[X][Y][Z]>] [CLEAR_HOMED=<[X][Y][Z]>]"
+  },
+  "SET_LED": {
+    "description": "This sets the LED output. Each color `<value>` must be between 0.0 and 1.0. The WHITE option is only valid on RGBW LEDs. If the LED supports multiple chips in a daisy-chain then one may specify INDEX to alter the color of just the given chip (1 for the first chip, 2 for the second, etc.). If INDEX is not provided then all LEDs in the daisy-chain will be set to the provided color. If TRANSMIT=0 is specified then the color change will only be made on the next SET_LED command that does not specify TRANSMIT=0; this may be useful in combination with the INDEX parameter to batch multiple updates in a daisy-chain. By default, the SET_LED command will sync it's changes with other ongoing gcode commands. This can lead to undesirable behavior if LEDs are being set while the printer is not printing as it will reset the idle timeout. If careful timing is not needed, the optional SYNC=0 parameter can be specified to apply the changes without resetting the idle timeout.",
+    "params": [
+      {
+        "name": "LED",
+        "optional": false
+      },
+      {
+        "name": "RED",
+        "optional": false
+      },
+      {
+        "name": "GREEN",
+        "optional": false
+      },
+      {
+        "name": "BLUE",
+        "optional": false
+      },
+      {
+        "name": "WHITE",
+        "optional": false
+      },
+      {
+        "name": "INDEX",
+        "optional": true
+      },
+      {
+        "name": "TRANSMIT",
+        "optional": true
+      },
+      {
+        "name": "SYNC",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_LED LED=<config_name> RED=<value> GREEN=<value> BLUE=<value> WHITE=<value> [INDEX=<index>] [TRANSMIT=0] [SYNC=1]"
+  },
+  "SET_LED_TEMPLATE": {
+    "description": "Assign a [display_template](Config_Reference.md#display_template) to a given [LED](Config_Reference.md#leds). For example, if one defined a `[display_template my_led_template]` config section then one could assign `TEMPLATE=my_led_template` here. The display_template should produce a comma separated string containing four floating point numbers corresponding to red, green, blue, and white color settings. The template will be continuously evaluated and the LED will be automatically set to the resulting colors. One may set display_template parameters to use during template evaluation (parameters will be parsed as Python literals). If INDEX is not specified then all chips in the LED's daisy-chain will be set to the template, otherwise only the chip with the given index will be updated. If TEMPLATE is an empty string then this command will clear any previous template assigned to the LED (one can then use `SET_LED` commands to manage the LED's color settings).",
+    "params": [
+      {
+        "name": "LED",
+        "optional": false
+      },
+      {
+        "name": "TEMPLATE",
+        "optional": false
+      },
+      {
+        "name": "INDEX",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_LED_TEMPLATE LED=<led_name> TEMPLATE=<template_name> [<param_x>=<literal>] [INDEX=<index>]"
+  },
+  "SET_PIN": {
+    "description": "This command works similarly to [output_pin](#output_pin) SET_PIN commands. The command here supports setting an explicit cycle time using the CYCLE_TIME parameter (specified in seconds). Note that the CYCLE_TIME parameter is not stored between SET_PIN commands (any SET_PIN command without an explicit CYCLE_TIME parameter will use the `cycle_time` specified in the pwm_cycle_time config section).",
+    "params": [
+      {
+        "name": "PIN",
+        "optional": false
+      },
+      {
+        "name": "VALUE",
+        "optional": false
+      },
+      {
+        "name": "CYCLE_TIME",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_PIN PIN=config_name VALUE=<value> [CYCLE_TIME=<cycle_time>]"
+  },
+  "SET_PRESSURE_ADVANCE": {
+    "description": "Set pressure advance parameters of an extruder stepper (as defined in an [extruder](Config_Reference.md#extruder) or [extruder_stepper](Config_Reference.md#extruder_stepper) config section). If EXTRUDER is not specified, it defaults to the stepper defined in the active hotend.",
+    "params": [
+      {
+        "name": "EXTRUDER",
+        "optional": true
+      },
+      {
+        "name": "ADVANCE",
+        "optional": true
+      },
+      {
+        "name": "SMOOTH_TIME",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_PRESSURE_ADVANCE [EXTRUDER=<config_name>] [ADVANCE=<pressure_advance>] [SMOOTH_TIME=<pressure_advance_smooth_time>]"
+  },
+  "SET_PRINT_STATS_INFO": {
+    "description": "Pass slicer info like layer act and total to Klipper. Add `SET_PRINT_STATS_INFO [TOTAL_LAYER=<total_layer_count>]` to your slicer start gcode section and `SET_PRINT_STATS_INFO [CURRENT_LAYER= <current_layer>]` at the layer change gcode section to pass layer information from your slicer to Klipper.",
+    "params": [
+      {
+        "name": "TOTAL_LAYER",
+        "optional": true
+      },
+      {
+        "name": "CURRENT_LAYER",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_PRINT_STATS_INFO [TOTAL_LAYER=<total_layer_count>] [CURRENT_LAYER= <current_layer>]"
+  },
+  "SET_RETRACTION": {
+    "description": "Adjust the parameters used by firmware retraction. RETRACT_LENGTH determines the length of filament to retract and unretract. The speed of retraction is adjusted via RETRACT_SPEED, and is typically set relatively high. The speed of unretraction is adjusted via UNRETRACT_SPEED, and is not particularly critical, although often lower than RETRACT_SPEED. In some cases it is useful to add a small amount of additional length on unretraction, and this is set via UNRETRACT_EXTRA_LENGTH. SET_RETRACTION is commonly set as part of slicer per-filament configuration, as different filaments require different parameter settings.",
+    "params": [
+      {
+        "name": "RETRACT_LENGTH",
+        "optional": true
+      },
+      {
+        "name": "RETRACT_SPEED",
+        "optional": true
+      },
+      {
+        "name": "UNRETRACT_EXTRA_LENGTH",
+        "optional": true
+      },
+      {
+        "name": "UNRETRACT_SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_RETRACTION [RETRACT_LENGTH=<mm>] [RETRACT_SPEED=<mm/s>] [UNRETRACT_EXTRA_LENGTH=<mm>] [UNRETRACT_SPEED=<mm/s>]"
+  },
+  "SET_SERVO": {
+    "description": "Set the servo position to the given angle (in degrees) or pulse width (in seconds). Use `WIDTH=0` to disable the servo output.",
+    "params": [
+      {
+        "name": "SERVO",
+        "optional": false
+      },
+      {
+        "name": "ANGLE",
+        "optional": true
+      },
+      {
+        "name": "WIDTH",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_SERVO SERVO=config_name [ANGLE=<degrees> | WIDTH=<seconds>]"
+  },
+  "SET_SKEW": {
+    "description": "Configures the [skew_correction] module with measurements (in mm) taken from a calibration print. One may enter measurements for any combination of planes, planes not entered will retain their current value. If `CLEAR=1` is entered then all skew correction will be disabled.",
+    "params": [
+      {
+        "name": "XY",
+        "optional": true
+      },
+      {
+        "name": "XZ",
+        "optional": true
+      },
+      {
+        "name": "YZ",
+        "optional": true
+      },
+      {
+        "name": "CLEAR",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_SKEW [XY=<ac_length,bd_length,ad_length>] [XZ=<ac,bd,ad>] [YZ=<ac,bd,ad>] [CLEAR=<0|1>]"
+  },
+  "SET_SMART_EFFECTOR": {
+    "description": "Set the Smart Effector parameters. When `SENSITIVITY` is specified, the respective value is written to the SmartEffector EEPROM (requires `control_pin` to be provided). Acceptable `<sensitivity>` values are 0..255, the default is 50. Lower values require less nozzle contact force to trigger (but there is a higher risk of false triggering due to vibrations during probing), and higher values reduce false triggering (but require larger contact force to trigger). Since the sensitivity is written to EEPROM, it is preserved after the shutdown, and so it does not need to be configured on every printer startup. `ACCEL` and `RECOVERY_TIME` allow to override the corresponding parameters at run-time, see the [config section](Config_Reference.md#smart_effector) of Smart Effector for more info on those parameters.",
+    "params": [
+      {
+        "name": "SENSITIVITY",
+        "optional": true
+      },
+      {
+        "name": "ACCEL",
+        "optional": true
+      },
+      {
+        "name": "RECOVERY_TIME",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_SMART_EFFECTOR [SENSITIVITY=<sensitivity>] [ACCEL=<accel>] [RECOVERY_TIME=<time>]"
+  },
+  "SET_STEPPER_CARRIAGES": {
+    "description": "Set or update the stepper carriages. `<stepper_name>` must reference an existing stepper defined in `printer.cfg`, and `<carriages>` describes the carriages the stepper moves. See [Generic Cartesian Kinematics](Config_Reference.md#generic-cartesian-kinematics) for a more detailed overview of the `carriages` parameter in the stepper configuration section. Note that it is only possible to change the coefficients or signs of the carriages with this command, but a user cannot add or remove the carriages that the stepper controls.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "CARRIAGES",
+        "optional": false
+      },
+      {
+        "name": "DISABLE_CHECKS",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_STEPPER_CARRIAGES STEPPER=<stepper_name> CARRIAGES=<carriages> [DISABLE_CHECKS=[0|1]]"
+  },
+  "SET_STEPPER_ENABLE": {
+    "description": "Enable or disable only the given stepper. This is a diagnostic and debugging tool and must be used with care. Disabling an axis motor does not reset the homing information. Manually moving a disabled stepper may cause the machine to operate the motor outside of safe limits. This can lead to damage to axis components, hot ends, and print surface.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "ENABLE",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_STEPPER_ENABLE STEPPER=<config_name> ENABLE=[0|1]"
+  },
+  "SET_TEMPERATURE_FAN_TARGET": {
+    "description": "Sets the target temperature for a temperature_fan. If a target is not supplied, it is set to the specified temperature in the config file. If speeds are not supplied, no change is applied.",
+    "params": [],
+    "syntax": "SET_TEMPERATURE_FAN_TARGET temperature_fan=<temperature_fan_name> [target=<target_temperature>] [min_speed=<min_speed>] [max_speed=<max_speed>]"
+  },
+  "SET_TMC_CURRENT": {
+    "description": "This will adjust the run and hold currents of the TMC driver. `HOLDCURRENT` is not applicable to tmc2660 drivers. When used on a driver which has the `globalscaler` field (tmc5160 and tmc2240), if StealthChop2 is used, the stepper must be held at standstill for >130ms so that the driver executes the AT#1 calibration.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "CURRENT",
+        "optional": false
+      },
+      {
+        "name": "HOLDCURRENT",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_TMC_CURRENT STEPPER=<name> CURRENT=<amps> HOLDCURRENT=<amps>"
+  },
+  "SET_TMC_FIELD": {
+    "description": "This will alter the value of the specified register field of the TMC driver. This command is intended for low-level diagnostics and debugging only because changing the fields during run-time can lead to undesired and potentially dangerous behavior of your printer. Permanent changes should be made using the printer configuration file instead. No sanity checks are performed for the given values. A VELOCITY can also be specified instead of a VALUE. This velocity is converted to the 20bit TSTEP based value representation. Only use the VELOCITY argument for fields that represent velocities.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      },
+      {
+        "name": "FIELD",
+        "optional": false
+      },
+      {
+        "name": "VALUE",
+        "optional": false
+      },
+      {
+        "name": "VELOCITY",
+        "optional": false
+      }
+    ],
+    "syntax": "SET_TMC_FIELD STEPPER=<name> FIELD=<field> VALUE=<value> VELOCITY=<value>"
+  },
+  "SET_VELOCITY_LIMIT": {
+    "description": "This command can alter the velocity limits that were specified in the printer config file. See the [printer config section](Config_Reference.md#printer) for a description of each parameter.",
+    "params": [
+      {
+        "name": "VELOCITY",
+        "optional": true
+      },
+      {
+        "name": "ACCEL",
+        "optional": true
+      },
+      {
+        "name": "MINIMUM_CRUISE_RATIO",
+        "optional": true
+      },
+      {
+        "name": "SQUARE_CORNER_VELOCITY",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_VELOCITY_LIMIT [VELOCITY=<value>] [ACCEL=<value>] [MINIMUM_CRUISE_RATIO=<value>] [SQUARE_CORNER_VELOCITY=<value>]"
+  },
+  "SET_Z_THERMAL_ADJUST": {
+    "description": "Enable or disable the Z thermal adjustment with `ENABLE`. Disabling does not remove any adjustment already applied, but will freeze the current adjustment value - this prevents potentially unsafe downward Z movement. Re-enabling can potentially cause upward tool movement as the adjustment is updated and applied. `TEMP_COEFF` allows run-time tuning of the adjustment temperature coefficient (i.e. the `TEMP_COEFF` config parameter). `TEMP_COEFF` values are not saved to the config. `REF_TEMP` manually overrides the reference temperature typically set during homing (for use in e.g. non-standard homing routines) - will be reset automatically upon homing.",
+    "params": [
+      {
+        "name": "ENABLE",
+        "optional": true
+      },
+      {
+        "name": "TEMP_COEFF",
+        "optional": true
+      },
+      {
+        "name": "REF_TEMP",
+        "optional": true
+      }
+    ],
+    "syntax": "SET_Z_THERMAL_ADJUST [ENABLE=<0:1>] [TEMP_COEFF=<value>] [REF_TEMP=<value>]"
+  },
+  "SHAPER_CALIBRATE": {
+    "description": "Similarly to `TEST_RESONANCES`, runs the resonance test as configured, and tries to find the optimal parameters for the input shaper for the requested axis (or both X and Y axes if `AXIS` parameter is unset). If `MAX_SMOOTHING` is unset, its value is taken from `[resonance_tester]` section, with the default being unset. See the [Max smoothing](Measuring_Resonances.md#max-smoothing) of the measuring resonances guide for more information on the use of this feature. The results of the tuning are printed to the console, and the frequency responses and the different input shapers values are written to a CSV file(s) `/tmp/calibration_data_<axis>_<name>.csv`. Unless specified, NAME defaults to the current time in \"YYYYMMDD_HHMMSS\" format. Note that the suggested input shaper parameters can be persisted in the config by issuing `SAVE_CONFIG` command, and if `[input_shaper]` was already enabled previously, these parameters take effect immediately.",
+    "params": [
+      {
+        "name": "AXIS",
+        "optional": true
+      },
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "FREQ_START",
+        "optional": true
+      },
+      {
+        "name": "FREQ_END",
+        "optional": true
+      },
+      {
+        "name": "ACCEL_PER_HZ",
+        "optional": true
+      },
+      {
+        "name": "HZ_PER_SEC",
+        "optional": true
+      },
+      {
+        "name": "CHIPS",
+        "optional": true
+      },
+      {
+        "name": "MAX_SMOOTHING",
+        "optional": true
+      },
+      {
+        "name": "INPUT_SHAPING",
+        "optional": true
+      }
+    ],
+    "syntax": "SHAPER_CALIBRATE [AXIS=<axis>] [NAME=<name>] [FREQ_START=<min_freq>] [FREQ_END=<max_freq>] [ACCEL_PER_HZ=<accel_per_hz>][HZ_PER_SEC=<hz_per_sec>] [CHIPS=<chip_name>] [MAX_SMOOTHING=<max_smoothing>] [INPUT_SHAPING=<0:1>]"
+  },
+  "SKEW_PROFILE": {
+    "description": "Profile management for skew_correction. LOAD will restore skew state from the profile matching the supplied name. SAVE will save the current skew state to a profile matching the supplied name. Remove will delete the profile matching the supplied name from persistent memory. Note that after SAVE or REMOVE operations have been run the SAVE_CONFIG gcode must be run to make the changes to persistent memory permanent.",
+    "params": [
+      {
+        "name": "LOAD",
+        "optional": true
+      },
+      {
+        "name": "SAVE",
+        "optional": true
+      },
+      {
+        "name": "REMOVE",
+        "optional": true
+      }
+    ],
+    "syntax": "SKEW_PROFILE [LOAD=<name>] [SAVE=<name>] [REMOVE=<name>]"
+  },
+  "STATUS": {
+    "description": "Report the Klipper host software status.",
+    "params": [],
+    "syntax": "STATUS"
+  },
+  "STEPPER_BUZZ": {
+    "description": "Move the given stepper forward one mm and then backward one mm, repeated 10 times. This is a diagnostic tool to help verify stepper connectivity.",
+    "params": [
+      {
+        "name": "STEPPER",
+        "optional": false
+      }
+    ],
+    "syntax": "STEPPER_BUZZ STEPPER=<config_name>"
+  },
+  "SYNC_EXTRUDER_MOTION": {
+    "description": "This command will cause the stepper specified by EXTRUDER (as defined in an [extruder](Config_Reference.md#extruder) or [extruder_stepper](Config_Reference.md#extruder_stepper) config section) to become synchronized to the movement of an extruder specified by MOTION_QUEUE (as defined in an [extruder](Config_Reference.md#extruder) config section). If MOTION_QUEUE is an empty string then the stepper will be desynchronized from all extruder movement.",
+    "params": [
+      {
+        "name": "EXTRUDER",
+        "optional": false
+      },
+      {
+        "name": "MOTION_QUEUE",
+        "optional": false
+      }
+    ],
+    "syntax": "SYNC_EXTRUDER_MOTION EXTRUDER=<name> MOTION_QUEUE=<name>"
+  },
+  "TAPS": {
+    "description": "the number of taps the tool expects",
+    "params": [],
+    "syntax": "TAPS"
+  },
+  "TAP_THRESHOLD=<value>": {
+    "description": "This overrides the `tap_threshold` specified in the `[probe_eddy_current]` config section when probing using `METHOD=tap`.",
+    "params": [
+      {
+        "name": "TAP_THRESHOLD",
+        "optional": false
+      }
+    ],
+    "syntax": "TAP_THRESHOLD=<value>"
+  },
+  "TEMPERATURE_PROBE_CALIBRATE": {
+    "description": "Initiates probe drift calibration for eddy current based probes. The `TARGET` is a target temperature for the last sample. When the temperature recorded during a sample exceeds the `TARGET` calibration will complete. The `STEP` parameter sets temperature delta (in C) between samples. After a sample has been taken, this delta is used to schedule a call to `TEMPERATURE_PROBE_NEXT`. The default `STEP` is 2. The `METHOD` only supports `tap` as an option, if specified, probing will be automated.",
+    "params": [
+      {
+        "name": "PROBE",
+        "optional": true
+      },
+      {
+        "name": "TARGET",
+        "optional": true
+      },
+      {
+        "name": "STEP",
+        "optional": true
+      },
+      {
+        "name": "METHOD",
+        "optional": true
+      }
+    ],
+    "syntax": "TEMPERATURE_PROBE_CALIBRATE [PROBE=<probe name>] [TARGET=<value>] [STEP=<value>] [METHOD=<method>]"
+  },
+  "TEMPERATURE_PROBE_COMPLETE": {
+    "description": "Can be used to end calibration and save the current result before the `TARGET` temperature is reached. This command is only available during calibration.",
+    "params": [],
+    "syntax": "TEMPERATURE_PROBE_COMPLETE"
+  },
+  "TEMPERATURE_PROBE_NEXT": {
+    "description": "After calibration has started this command is run to take the next sample. It is automatically scheduled to run when the delta specified by `STEP` has been reached, however its also possible to manually run this command to force a new sample. This command is only available during calibration.",
+    "params": [],
+    "syntax": "TEMPERATURE_PROBE_NEXT"
+  },
+  "TEMPERATURE_WAIT": {
+    "description": "Wait until the given temperature sensor is at or above the supplied MINIMUM and/or at or below the supplied MAXIMUM.",
+    "params": [
+      {
+        "name": "SENSOR",
+        "optional": false
+      },
+      {
+        "name": "MINIMUM",
+        "optional": true
+      },
+      {
+        "name": "MAXIMUM",
+        "optional": true
+      }
+    ],
+    "syntax": "TEMPERATURE_WAIT SENSOR=<config_name> [MINIMUM=<target>] [MAXIMUM=<target>]"
+  },
+  "TEST_RESONANCES": {
+    "description": "Runs the resonance test in all configured probe points for the requested \"axis\" and measures the acceleration using the accelerometer chips configured for the respective axis. \"axis\" can either be X, Y or Z, or specify an arbitrary direction as `AXIS=dx,dy[,dz]`, where dx, dy, dz are floating point numbers defining a direction vector (e.g. `AXIS=X`, `AXIS=Y`, or `AXIS=1,-1` to define a diagonal direction in XY plane, or `AXIS=0,1,1` to define a direction in YZ plane). Note that `AXIS=dx,dy` and `AXIS=-dx,-dy` is equivalent. `chip_name` can be one or more configured accel chips, delimited with comma, for example `CHIPS=\"adxl345, adxl345 rpi\"`. If POINT is specified it will override the point(s) configured in `[resonance_tester]`. If `INPUT_SHAPING=0` or not set(default), disables input shaping for the resonance testing, because it is not valid to run the resonance testing with the input shaper enabled. `OUTPUT` parameter is a comma-separated list of which outputs will be written. If `raw_data` is requested, then the raw accelerometer data is written into a file or a series of files `/tmp/raw_data_<axis>_[<chip_name>_][<point>_]<name>.csv` with (`<point>_` part of the name generated only if more than 1 probe point is configured or POINT is specified). If `resonances` is specified, the frequency response is calculated (across all probe points) and written into `/tmp/resonances_<axis>_<name>.csv` file. If unset, OUTPUT defaults to `resonances`, and NAME defaults to the current time in \"YYYYMMDD_HHMMSS\" format.",
+    "params": [
+      {
+        "name": "AXIS",
+        "optional": false
+      },
+      {
+        "name": "OUTPUT",
+        "optional": true
+      },
+      {
+        "name": "NAME",
+        "optional": true
+      },
+      {
+        "name": "FREQ_START",
+        "optional": true
+      },
+      {
+        "name": "FREQ_END",
+        "optional": true
+      },
+      {
+        "name": "ACCEL_PER_HZ",
+        "optional": true
+      },
+      {
+        "name": "HZ_PER_SEC",
+        "optional": true
+      },
+      {
+        "name": "CHIPS",
+        "optional": true
+      },
+      {
+        "name": "POINT",
+        "optional": true
+      },
+      {
+        "name": "INPUT_SHAPING",
+        "optional": true
+      }
+    ],
+    "syntax": "TEST_RESONANCES AXIS=<axis> [OUTPUT=<resonances,raw_data>] [NAME=<name>] [FREQ_START=<min_freq>] [FREQ_END=<max_freq>] [ACCEL_PER_HZ=<accel_per_hz>] [HZ_PER_SEC=<hz_per_sec>] [CHIPS=<chip_name>] [POINT=x,y,z] [INPUT_SHAPING=<0:1>]"
+  },
+  "TIMEOOUT": {
+    "description": "the time, in seconds, that the tool waits for each tab before aborting.",
+    "params": [],
+    "syntax": "TIMEOOUT"
+  },
+  "TUNING_TOWER": {
+    "description": "A tool for tuning a parameter on each Z height during a print. The tool will run the given `COMMAND` with the given `PARAMETER` assigned to a value that varies with `Z` according to a formula. Use `FACTOR` if you will use a ruler or calipers to measure the Z height of the optimum value, or `STEP_DELTA` and `STEP_HEIGHT` if the tuning tower model has bands of discrete values as is common with temperature towers. If `SKIP=<value>` is specified, the tuning process doesn't begin until Z height `<value>` is reached, and below that the value will be set to `START`; in this case, the `z_height` used in the formulas below is actually `max(z - skip, 0)`. There are three possible combinations of options: - `FACTOR`: The value changes at a rate of `factor` per millimeter. The formula used is: `value = start + factor * z_height`. You can plug the optimum Z height directly into the formula to determine the optimum parameter value. - `FACTOR` and `BAND`: The value changes at an average rate of `factor` per millimeter, but in discrete bands where the adjustment will only be made every `BAND` millimeters of Z height. The formula used is: `value = start + factor * ((floor(z_height / band) + .5) * band)`. - `STEP_DELTA` and `STEP_HEIGHT`: The value changes by `STEP_DELTA` every `STEP_HEIGHT` millimeters. The formula used is: `value = start + step_delta * floor(z_height / step_height)`. You can simply count bands or read tuning tower labels to determine the optimum value.",
+    "params": [
+      {
+        "name": "COMMAND",
+        "optional": false
+      },
+      {
+        "name": "PARAMETER",
+        "optional": false
+      },
+      {
+        "name": "START",
+        "optional": false
+      },
+      {
+        "name": "SKIP",
+        "optional": true
+      },
+      {
+        "name": "FACTOR",
+        "optional": true
+      },
+      {
+        "name": "BAND",
+        "optional": true
+      },
+      {
+        "name": "STEP_DELTA",
+        "optional": true
+      },
+      {
+        "name": "STEP_HEIGHT",
+        "optional": true
+      }
+    ],
+    "syntax": "TUNING_TOWER COMMAND=<command> PARAMETER=<name> START=<value> [SKIP=<value>] [FACTOR=<value> [BAND=<value>]] | [STEP_DELTA=<value> STEP_HEIGHT=<value>]"
+  },
+  "TURN_OFF_HEATERS": {
+    "description": "Turn off all heaters.",
+    "params": [],
+    "syntax": "TURN_OFF_HEATERS"
+  },
+  "UPDATE_DELAYED_GCODE": {
+    "description": "Updates the delay duration for the identified [delayed_gcode] and starts the timer for gcode execution. A value of 0 will cancel a pending delayed gcode from executing.",
+    "params": [
+      {
+        "name": "ID",
+        "optional": true
+      },
+      {
+        "name": "DURATION",
+        "optional": true
+      }
+    ],
+    "syntax": "UPDATE_DELAYED_GCODE [ID=<name>] [DURATION=<seconds>]"
+  },
+  "Z_ENDSTOP_CALIBRATE": {
+    "description": "Run a helper script useful for calibrating a Z position_endstop config setting. See the MANUAL_PROBE command for details on the parameters and the additional commands available while the tool is active.",
+    "params": [
+      {
+        "name": "SPEED",
+        "optional": true
+      }
+    ],
+    "syntax": "Z_ENDSTOP_CALIBRATE [SPEED=<speed>]"
+  },
+  "Z_OFFSET_APPLY_ENDSTOP": {
+    "description": "Take the current Z Gcode offset (aka, babystepping), and subtract it from the stepper_z endstop_position. This acts to take a frequently used babystepping value, and \"make it permanent\". Requires a `SAVE_CONFIG` to take effect.",
+    "params": [],
+    "syntax": "Z_OFFSET_APPLY_ENDSTOP"
+  },
+  "Z_OFFSET_APPLY_PROBE": {
+    "description": "Take the current Z Gcode offset (aka, babystepping), and subtract if from the probe's z_offset. This acts to take a frequently used babystepping value, and \"make it permanent\". Requires a `SAVE_CONFIG` to take effect.",
+    "params": [],
+    "syntax": "Z_OFFSET_APPLY_PROBE"
+  },
+  "Z_TILT_ADJUST": {
+    "description": "This command will probe the points specified in the config and then make independent adjustments to each Z stepper to compensate for tilt. See the PROBE command for details on the optional probe parameters. The optional `RETRIES`, `RETRY_TOLERANCE`, and `HORIZONTAL_MOVE_Z` values override those options specified in the config file.",
+    "params": [
+      {
+        "name": "RETRIES",
+        "optional": true
+      },
+      {
+        "name": "RETRY_TOLERANCE",
+        "optional": true
+      },
+      {
+        "name": "HORIZONTAL_MOVE_Z",
+        "optional": true
+      }
+    ],
+    "syntax": "Z_TILT_ADJUST [RETRIES=<value>] [RETRY_TOLERANCE=<value>] [HORIZONTAL_MOVE_Z=<value>] [<probe_parameter>=<value>]"
+  }
+}
