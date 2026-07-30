@@ -12,6 +12,7 @@
 import { reactive } from "vue";
 import { JsonRpcClient, type ReadyState } from "./client";
 import { settingsState } from "../settings";
+import type { ServerInfoResult } from "./types";
 
 export type ConnectionStatus =
   | "disconnected"
@@ -20,6 +21,18 @@ export type ConnectionStatus =
   | "reconnecting"
   | "error";
 
+/** Mirrors Moonraker's own `klippy_state` values (see `ServerInfoResult`).
+ *  `null` means "not connected to Moonraker, so unknown" — distinct from
+ *  Moonraker's own "disconnected" (connected to Moonraker, but Klipper isn't
+ *  reachable from it). */
+export type KlippyState =
+  | "ready"
+  | "startup"
+  | "shutdown"
+  | "error"
+  | "disconnected"
+  | null;
+
 export const connectionState = reactive({
   status: "disconnected" as ConnectionStatus,
   address: "",
@@ -27,6 +40,10 @@ export const connectionState = reactive({
   /** `http://host:port` (or `https://`) for the connected printer — Moonraker
    *  serves file content (e.g. logs) over plain HTTP, not the websocket. */
   httpBaseUrl: "",
+  /** Klipper's own state, as last reported by Moonraker — independent of the
+   *  websocket connection, since Klipper can restart/shut down while
+   *  Moonraker stays up and connected. */
+  klippyState: null as KlippyState,
 });
 
 const DEFAULT_PORT = 7125;
@@ -55,14 +72,18 @@ function clearReconnect(): void {
   reconnectDeadline = null;
 }
 
-const notifyHandlers = new Map<string, (params: unknown) => void>();
+// A method can have more than one subscriber (e.g. both objectStore and this
+// module itself react to `notify_klippy_ready`), so each entry is a list.
+const notifyHandlers = new Map<string, Array<(params: unknown) => void>>();
 
 /** Register a handler for a server notification method (e.g. `notify_status_update`). */
 export function onNotification(
   method: string,
   handler: (params: unknown) => void,
 ): void {
-  notifyHandlers.set(method, handler);
+  const handlers = notifyHandlers.get(method);
+  if (handlers) handlers.push(handler);
+  else notifyHandlers.set(method, [handler]);
 }
 
 export function getClient(): JsonRpcClient | null {
@@ -184,6 +205,7 @@ async function attemptConnection(rawAddress: string): Promise<ConnectAttemptResu
   } catch (err) {
     if (client === active) client = null;
     connectionState.httpBaseUrl = "";
+    connectionState.klippyState = null;
     return { ok: false, error: describeConnectError(err, url) };
   }
 
@@ -200,6 +222,16 @@ async function attemptConnection(rawAddress: string): Promise<ConnectAttemptResu
     console.warn("[moonraker] identify failed, continuing anyway", err);
   }
 
+  // Best-effort: gives an immediate klippyState instead of waiting on the
+  // next notify_klippy_* event, which may be a long time coming if Klipper
+  // is already sitting in "shutdown"/"error" when we connect.
+  try {
+    const info = await active.call<ServerInfoResult>("server.info");
+    if (client === active) connectionState.klippyState = parseKlippyState(info);
+  } catch (err) {
+    console.warn("[moonraker] server.info failed, continuing anyway", err);
+  }
+
   // Guard against being superseded (e.g. disconnected) while identify was
   // in flight — handleStateChange already nulled `client` in that case.
   if (client !== active) return { ok: false };
@@ -207,6 +239,13 @@ async function attemptConnection(rawAddress: string): Promise<ConnectAttemptResu
   connectionState.error = null;
   clearReconnect();
   return { ok: true };
+}
+
+const KNOWN_KLIPPY_STATES = ["ready", "startup", "shutdown", "error", "disconnected"];
+
+function parseKlippyState(info: ServerInfoResult | undefined): KlippyState {
+  const state = info?.klippy_state;
+  return KNOWN_KLIPPY_STATES.includes(state as string) ? (state as KlippyState) : null;
 }
 
 export async function connect(rawAddress: string): Promise<void> {
@@ -221,6 +260,7 @@ export async function connect(rawAddress: string): Promise<void> {
     connectionState.status = "error";
     connectionState.error = result.error ?? "Could not connect";
     connectionState.httpBaseUrl = "";
+    connectionState.klippyState = null;
   }
 }
 
@@ -235,6 +275,7 @@ export function disconnect(): void {
   connectionState.status = "disconnected";
   connectionState.error = null;
   connectionState.httpBaseUrl = "";
+  connectionState.klippyState = null;
 }
 
 /**
@@ -248,6 +289,7 @@ function startReconnect(): void {
     connectionState.status = "error";
     connectionState.error = "Connection lost";
     connectionState.httpBaseUrl = "";
+    connectionState.klippyState = null;
     return;
   }
 
@@ -273,6 +315,7 @@ async function runReconnectAttempt(): Promise<void> {
     connectionState.status = "error";
     connectionState.error = "Could not reconnect";
     connectionState.httpBaseUrl = "";
+    connectionState.klippyState = null;
     reconnectDeadline = null;
     return;
   }
@@ -293,8 +336,18 @@ function handleStateChange(source: JsonRpcClient, state: ReadyState): void {
 
 function handleNotify(method: string, params: unknown): void {
   // Moonraker emits many notifications v1 ignores; unknown ones are a no-op.
-  notifyHandlers.get(method)?.(params);
+  for (const handler of notifyHandlers.get(method) ?? []) handler(params);
 }
+
+onNotification("notify_klippy_ready", () => {
+  connectionState.klippyState = "ready";
+});
+onNotification("notify_klippy_shutdown", () => {
+  connectionState.klippyState = "shutdown";
+});
+onNotification("notify_klippy_disconnected", () => {
+  connectionState.klippyState = "disconnected";
+});
 
 function describeConnectError(err: unknown, url: string): string {
   const detail = err instanceof Error ? err.message : String(err);

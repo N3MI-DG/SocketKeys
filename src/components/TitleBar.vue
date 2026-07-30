@@ -87,6 +87,24 @@ const connected = computed(() => connectionState.status === "connected");
 const connecting = computed(() => connectionState.status === "connecting");
 const reconnecting = computed(() => connectionState.status === "reconnecting");
 
+/** Only meaningful once the websocket itself is up — Klipper's state is
+ *  irrelevant noise while we're not even connected to Moonraker. */
+const klippyLabel = computed(() => {
+  if (!connected.value) return "";
+  switch (connectionState.klippyState) {
+    case "shutdown":
+      return "Klipper Shutdown";
+    case "error":
+      return "Klipper Error";
+    case "disconnected":
+      return "Klipper Disconnected";
+    case "startup":
+      return "Klipper Starting…";
+    default:
+      return "";
+  }
+});
+
 const connectLabel = computed(() => {
   if (connected.value) return "Disconnect";
   if (reconnecting.value) return "Reconnecting…";
@@ -168,6 +186,9 @@ function toggleConnection() {
         :title="connectionState.error"
       >
         {{ connectionState.error }}
+      </span>
+      <span v-else-if="klippyLabel" class="klippy-badge">
+        {{ klippyLabel }}
       </span>
     </form>
 
@@ -397,6 +418,16 @@ function toggleConnection() {
 .connect-error {
   max-width: 320px;
   font-size: 11px;
+  color: var(--error);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.klippy-badge {
+  max-width: 320px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--error);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -83,6 +83,17 @@ export interface BuiltinCommandInfo {
   params: { name: string; optional: boolean }[];
 }
 
+/**
+ * `server.info` — the subset used to read Klipper's own connection state.
+ * `klippy_state` is one of "ready" | "startup" | "shutdown" | "error" |
+ * "disconnected"; kept as a bare string here since Moonraker treats it as
+ * such and any future value should still pass through rather than vanish.
+ */
+export interface ServerInfoResult {
+  klippy_connected: boolean;
+  klippy_state: string;
+}
+
 /** One entry from `server.files.list {root: "logs"}` — result is a bare
  *  array (confirmed in file_manager.py's `_handle_filelist_request`), not
  *  wrapped in an object. */
