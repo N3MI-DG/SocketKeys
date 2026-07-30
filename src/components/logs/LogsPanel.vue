@@ -80,29 +80,40 @@ watch(
 );
 
 const logEl = ref<HTMLElement | null>(null);
-let pinnedToBottom = true;
-
-function handleScroll() {
-  const el = logEl.value;
-  if (!el) return;
-  const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-  pinnedToBottom = distanceFromBottom < 24;
-}
+/** Set on selecting a new file, consumed by the next content update — a
+ *  freshly opened log should always open snapped to its tail regardless of
+ *  wherever the previous file's scroll position happened to be. */
+let forcePinNext = false;
 
 watch(
   () => logsState.selected,
   () => {
-    pinnedToBottom = true; // a newly selected file should open snapped to its tail
+    forcePinNext = true;
   },
 );
 
+/**
+ * Auto-follows new content, but only while the log was already scrolled to
+ * (near) the bottom right before this update — read fresh here rather than
+ * tracked via a `scroll` listener, since a listener's own `scrollTop`
+ * assignment can race a fast-arriving next update (its `scroll` event firing
+ * after `scrollHeight` had already grown again), reading a stale
+ * distance-from-bottom and silently disabling auto-scroll for good. Reading
+ * synchronously here, before the `await nextTick()` below (the watcher runs
+ * pre-flush, so the DOM still reflects the *previous* content at that point),
+ * can't drift out of sync with what actually changed.
+ */
 watch(
   () => logsState.content,
   async () => {
-    if (!pinnedToBottom) return;
-    await nextTick();
     const el = logEl.value;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const wasPinned =
+      forcePinNext || el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    forcePinNext = false;
+    if (!wasPinned) return;
+    await nextTick();
+    el.scrollTop = el.scrollHeight;
   },
 );
 </script>
@@ -137,7 +148,7 @@ watch(
       </div>
     </div>
 
-    <div ref="logEl" class="log" @scroll="handleScroll">
+    <div ref="logEl" class="log">
       <p v-if="!connected" class="notice">{{ placeholder }}</p>
       <p v-else-if="logsState.filesError" class="notice error">
         {{ logsState.filesError }}

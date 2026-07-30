@@ -31,23 +31,31 @@ const placeholder = computed(() => {
 });
 
 const logEl = ref<HTMLElement | null>(null);
-/** Only auto-scroll while the user hasn't scrolled away from the bottom. */
-let pinnedToBottom = true;
 
-function handleScroll() {
-  const el = logEl.value;
-  if (!el) return;
-  const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-  pinnedToBottom = distanceFromBottom < 24;
-}
-
+/**
+ * Auto-follows new output, but only while the log was already scrolled to
+ * (near) the bottom right before this update. Deliberately reads scroll
+ * position fresh on each update rather than tracking it via a separate
+ * `scroll` listener: a burst of rapid pushes (a multi-line macro response
+ * firing several `notify_gcode_response`s within milliseconds) let that
+ * listener's own `scrollTop` assignment race the *next* push's DOM patch —
+ * by the time its resulting `scroll` event actually fired, `scrollHeight`
+ * had already grown past what it accounted for, so it read a stale
+ * distance-from-bottom, wrongly concluded the user had scrolled away, and
+ * silently disabled auto-scroll for good. Reading fresh here, synchronously
+ * before the `await nextTick()` below (the watcher runs pre-flush, so the
+ * DOM still reflects the *previous* entry count at that point), can't drift
+ * out of sync with what actually changed.
+ */
 watch(
   () => consoleState.entries.length,
   async () => {
-    if (!pinnedToBottom) return;
-    await nextTick();
     const el = logEl.value;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    const wasPinned = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    if (!wasPinned) return;
+    await nextTick();
+    el.scrollTop = el.scrollHeight;
   },
 );
 
@@ -58,7 +66,16 @@ function loadIfNeeded() {
   void ensureMacroSourceLoaded();
 }
 
-onMounted(loadIfNeeded);
+onMounted(async () => {
+  loadIfNeeded();
+  // `consoleState.entries` may already be populated (e.g. switching back to
+  // this frame after being connected a while) — the length-driven watch
+  // above only fires on a *change*, so a fresh mount needs its own explicit
+  // jump to the bottom rather than starting scrolled to the top.
+  await nextTick();
+  const el = logEl.value;
+  if (el) el.scrollTop = el.scrollHeight;
+});
 watch(() => connectionState.status, loadIfNeeded);
 
 function entryClass(entry: ConsoleEntry): string {
@@ -96,7 +113,7 @@ function formatTime(epochSeconds: number): string {
       </button>
     </div>
 
-    <div ref="logEl" class="log" @scroll="handleScroll">
+    <div ref="logEl" class="log">
       <p v-if="!connected" class="notice">{{ placeholder }}</p>
       <p v-else-if="consoleState.historyError" class="notice error">
         {{ consoleState.historyError }}
@@ -189,8 +206,6 @@ function formatTime(epochSeconds: number): string {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 20px;
 }
 
 .time {
