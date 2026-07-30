@@ -5,6 +5,16 @@ This app is vibe coded. if you have a problem with the code, bitch at Anthropic.
 The credit should go to the developers of Klipper, Moonraker and Mainsail. Their projects made this possible.
 
 # SocketKeys
+
+<p align="center">
+  <img src="images/1.png" width="49%" />
+  <img src="images/2.png" width="49%" />
+</p>
+<p align="center">
+  <img src="images/3.png" width="49%" />
+  <img src="images/4.png" width="49%" />
+</p>
+
 A desktop client for [Moonraker](https://moonraker.readthedocs.io/), the JSON-RPC
 API server that fronts the [Klipper](https://www.klipper3d.org/) 3D-printer
 firmware. Built with [Tauri 2](https://tauri.app/) (Rust shell + native
