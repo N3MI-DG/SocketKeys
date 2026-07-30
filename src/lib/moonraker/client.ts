@@ -1,10 +1,18 @@
 /**
- * Minimal JSON-RPC 2.0 client over a plain WebSocket.
+ * Minimal JSON-RPC 2.0 client over a Tauri-native WebSocket.
+ *
+ * Uses `@tauri-apps/plugin-websocket` (a Rust/tokio socket bridged over IPC)
+ * rather than the browser's own `WebSocket`, since the webview's network
+ * stack enforces browser-only restrictions (mixed content, an Origin header
+ * Moonraker's CORS check may not trust) that don't apply to a printer's
+ * plain `ws://` endpoint on the local network.
  *
  * Deliberately Vue-agnostic: this is transport only, so it can be reasoned
  * about (and driven by a fake socket) without mounting anything. Reconnection
  * policy lives a layer up in connection.ts.
  */
+
+import TauriWebSocket, { type Message } from "@tauri-apps/plugin-websocket";
 
 export type ReadyState = "connecting" | "open" | "closed";
 
@@ -24,7 +32,8 @@ interface PendingCall {
 }
 
 export class JsonRpcClient {
-  private ws: WebSocket | null = null;
+  private ws: TauriWebSocket | null = null;
+  private unlisten: (() => void) | null = null;
   private state: ReadyState = "closed";
   private nextId = 1;
   private readonly pending = new Map<number, PendingCall>();
@@ -42,53 +51,46 @@ export class JsonRpcClient {
   /** Resolves once the socket is open; rejects on failure or timeout. */
   connect(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      let socket: WebSocket;
-      try {
-        socket = new WebSocket(this.url);
-      } catch (err) {
-        this.setState("closed");
-        reject(new Error(`Invalid address: ${String(err)}`));
-        return;
-      }
-
-      this.ws = socket;
       this.connectSettled = false;
       this.setState("connecting");
 
-      // WebSocket has no built-in connect timeout, so race it manually.
       const timer = setTimeout(() => {
         if (this.connectSettled) return;
         this.connectSettled = true;
-        this.detach(socket);
-        socket.close();
+        const socket = this.ws;
         this.ws = null;
+        this.detach();
+        void socket?.disconnect();
         this.failAll(new Error("Connection timed out"));
         this.setState("closed");
         reject(new Error("Connection timed out"));
       }, CONNECT_TIMEOUT_MS);
 
-      socket.onopen = () => {
-        if (this.connectSettled) return;
-        this.connectSettled = true;
-        clearTimeout(timer);
-        this.setState("open");
-        resolve();
-      };
-
-      socket.onmessage = (event) => this.handleMessage(event);
-
-      // onerror carries no useful detail in browsers; onclose always follows.
-      socket.onerror = () => {};
-
-      socket.onclose = () => {
-        clearTimeout(timer);
-        const settled = this.connectSettled;
-        this.connectSettled = true;
-        if (this.ws === socket) this.ws = null;
-        this.failAll(new Error("Connection closed"));
-        this.setState("closed");
-        if (!settled) reject(new Error("Could not connect"));
-      };
+      TauriWebSocket.connect(this.url)
+        .then((socket) => {
+          if (this.connectSettled) {
+            // Timed out while connect() was still in flight.
+            void socket.disconnect();
+            return;
+          }
+          this.connectSettled = true;
+          clearTimeout(timer);
+          this.ws = socket;
+          this.unlisten = socket.addListener((msg) =>
+            this.handleMessage(socket, msg),
+          );
+          this.setState("open");
+          resolve();
+        })
+        .catch((err) => {
+          if (this.connectSettled) return;
+          this.connectSettled = true;
+          clearTimeout(timer);
+          this.ws = null;
+          this.failAll(new Error("Connection closed"));
+          this.setState("closed");
+          reject(new Error(`Could not connect: ${String(err)}`));
+        });
     });
   }
 
@@ -116,15 +118,13 @@ export class JsonRpcClient {
         timer,
       });
 
-      try {
-        socket.send(
-          JSON.stringify({ jsonrpc: "2.0", method, params: params ?? {}, id }),
-        );
-      } catch (err) {
-        this.pending.delete(id);
-        clearTimeout(timer);
-        reject(new Error(`Failed to send "${method}": ${String(err)}`));
-      }
+      socket
+        .send(JSON.stringify({ jsonrpc: "2.0", method, params: params ?? {}, id }))
+        .catch((err) => {
+          this.pending.delete(id);
+          clearTimeout(timer);
+          reject(new Error(`Failed to send "${method}": ${String(err)}`));
+        });
     });
   }
 
@@ -134,16 +134,29 @@ export class JsonRpcClient {
     this.failAll(new Error("Connection closed"));
     if (socket) {
       // Detach first so our own close doesn't look like a dropped connection.
-      this.detach(socket);
-      socket.close();
+      this.detach();
+      void socket.disconnect();
     }
     this.setState("closed");
   }
 
-  private handleMessage(event: MessageEvent): void {
+  /** `socket` identifies which connection this came from, so a stale/
+   *  superseded socket's close can't be mistaken for the live one's. */
+  private handleMessage(socket: TauriWebSocket, msg: Message): void {
+    if (msg.type === "Close") {
+      if (this.ws !== socket) return; // already superseded
+      this.ws = null;
+      this.detach();
+      this.failAll(new Error("Connection closed"));
+      this.setState("closed");
+      return;
+    }
+
+    if (msg.type !== "Text") return; // Moonraker only sends text JSON-RPC frames
+
     let message: unknown;
     try {
-      message = JSON.parse(typeof event.data === "string" ? event.data : "");
+      message = JSON.parse(msg.data);
     } catch {
       // One malformed frame must never take down the socket.
       console.warn("[moonraker] dropped malformed frame");
@@ -174,11 +187,9 @@ export class JsonRpcClient {
     }
   }
 
-  private detach(socket: WebSocket): void {
-    socket.onopen = null;
-    socket.onmessage = null;
-    socket.onerror = null;
-    socket.onclose = null;
+  private detach(): void {
+    this.unlisten?.();
+    this.unlisten = null;
   }
 
   /** Nothing may stay pending across a close, or callers hang forever. */
