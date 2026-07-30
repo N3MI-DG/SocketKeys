@@ -192,9 +192,21 @@ onNotification("notify_status_update", (params) => {
   if (isPlainObject(diff)) mergeStatusUpdate(diff);
 });
 
-// Klipper restarting rebuilds its object set, so re-discover it.
+// Klipper restarting rebuilds its object set, so re-discover it. It also
+// wipes Klipper's own subscription set (klippy/webhooks.py
+// QueryStatusHelper is reconstructed from scratch), so anything already in
+// `subscribedNames` from before the restart needs to be resent — otherwise
+// the tree keeps showing those nodes as expanded with status frozen at its
+// last value, since no more `notify_status_update` will arrive for them.
 onNotification("notify_klippy_ready", () => {
-  if (connectionState.status === "connected") void loadObjectList();
+  if (connectionState.status !== "connected") return;
+  void loadObjectList();
+  if (objectStoreState.subscribedNames.size) {
+    for (const name of objectStoreState.subscribedNames) {
+      objectStoreState.pendingSubscribe.add(name);
+    }
+    void queueSubscribe();
+  }
 });
 
 // Any drop clears the tree: subscriptions are per-connection and don't survive.
