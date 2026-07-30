@@ -90,6 +90,19 @@ const isMacro = computed(
   () => !!activeCommand.value && isKnownMacro(activeCommand.value),
 );
 
+/** True once a macro's params are confirmed fetched with zero named `params.X`
+ *  references — distinct from `null` (not a macro, or source not loaded yet),
+ *  which must still show the detail view's loading/help state. */
+function commandHasNoParams(name: string): boolean {
+  return isKnownMacro(name) && getMacroParams(name)?.length === 0;
+}
+
+/** Nothing left to fill in for this command — the detail popover would have
+ *  nothing useful to add beyond the name already typed, so it stays hidden. */
+const activeHasNoParams = computed(
+  () => !!activeCommand.value && commandHasNoParams(activeCommand.value),
+);
+
 /** Fallback when a macro has no named `params.X` references (e.g. it just
  *  forwards `{rawparams}` to a shell command) — the raw text is still useful. */
 const macroSourceText = computed(() =>
@@ -129,7 +142,11 @@ const suggestions = computed(() => {
 });
 
 const showDetail = computed(
-  () => suggestionsOpen.value && !suggestions.value.length && !!activeCommand.value,
+  () =>
+    suggestionsOpen.value &&
+    !suggestions.value.length &&
+    !!activeCommand.value &&
+    !activeHasNoParams.value,
 );
 
 function resetHistoryNav() {
@@ -148,19 +165,26 @@ function navigateHistory(delta: number) {
       : history[history.length - 1 - historyIndex];
 }
 
+/** A trailing space readies the input for typing a param — pointless (and
+ *  visibly wrong) when the command takes none. */
 function applySuggestion(name: string) {
-  draft.value = `${name} `;
+  draft.value = commandHasNoParams(name) ? name : `${name} `;
   suggestionsOpen.value = false;
   inputEl.value?.focus();
 }
 
-/** Accepts whatever the popover is currently offering. False if there's nothing to accept. */
+/**
+ * Accepts whatever the popover is currently offering. False if there's
+ * nothing to accept — including a name that's already fully typed with a
+ * confirmed empty param list, since there's nothing left to complete and
+ * Enter should submit it on the first press rather than silently no-op.
+ */
 function acceptActive(): boolean {
   if (suggestions.value.length) {
     applySuggestion(suggestions.value[highlightIndex.value] ?? suggestions.value[0]);
     return true;
   }
-  if (activeCommand.value && !hasCommittedSpace.value) {
+  if (activeCommand.value && !hasCommittedSpace.value && !activeHasNoParams.value) {
     applySuggestion(activeCommand.value);
     return true;
   }
