@@ -46,9 +46,20 @@ const logEl = ref<HTMLElement | null>(null);
  * before the `await nextTick()` below (the watcher runs pre-flush, so the
  * DOM still reflects the *previous* entry count at that point), can't drift
  * out of sync with what actually changed.
+ *
+ * Watches `entries` itself (deep) rather than `entries.length`: once the
+ * log fills up, `trimEntries()` pushes a new entry and immediately splices
+ * the oldest one off in the same synchronous call, so `.length` goes
+ * 500 -> 501 -> 500 within a single reactive flush. `watch` only invokes its
+ * callback when the *source's value* actually differs from before, and
+ * `.length` ends that batch exactly where it started — so once the 500-entry
+ * cap kicks in, auto-scroll would silently stop firing for the rest of the
+ * session. A deep watch on the array is trigger-based rather than
+ * value-diffed, so both the push and the splice register as real mutations
+ * regardless of where `.length` nets out.
  */
 watch(
-  () => consoleState.entries.length,
+  () => consoleState.entries,
   async () => {
     const el = logEl.value;
     if (!el) return;
@@ -57,6 +68,7 @@ watch(
     await nextTick();
     el.scrollTop = el.scrollHeight;
   },
+  { deep: true },
 );
 
 function loadIfNeeded() {
