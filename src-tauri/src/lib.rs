@@ -12,6 +12,9 @@ pub fn run() {
         .plugin(tauri_plugin_websocket::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        // Restores the main window's size/position/maximized state on
+        // launch and saves it as it changes — no frontend involvement.
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
