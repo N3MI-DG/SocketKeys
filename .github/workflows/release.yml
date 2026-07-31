@@ -58,3 +58,13 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      # Include the standalone .exe
+      - name: Upload standalone Windows executable
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp src-tauri/target/release/socketkeys.exe SocketKeys-standalone.exe
+          gh release upload "${{ github.ref_name }}" SocketKeys-standalone.exe --clobber
