@@ -6,7 +6,7 @@ The credit should go to the developers of Klipper, Moonraker and Mainsail. Their
 
 # SocketKeys
 
-[![Latest Release](https://img.shields.io/github/v/tag/N3MI-DG/SocketKeys?label=latest%20release)](https://github.com/N3MI-DG/SocketKeys/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/N3MI-DG/SocketKeys?label=latest%20release)](https://github.com/N3MI-DG/SocketKeys/releases/latest)
 
 <p align="center">
   <img src="images/1.png" width="49%" />
