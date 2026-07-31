@@ -28,9 +28,12 @@ const DEFAULT_PANE_COUNT = 2;
 type ColorOverride = string | null;
 
 interface PersistedSettings {
-  /** One frame id per visible pane, at next launch — length is the pane
-   *  count (MIN_PANE_COUNT..MAX_PANE_COUNT). */
-  defaultFrame: { panes: string[] };
+  /** What each pane was actually showing when the app last closed — both
+   *  the pane count and per-pane frame choice, remembered exactly as it was
+   *  left rather than a separately-configured "default" that could drift
+   *  from what's really on screen. Length is the pane count
+   *  (MIN_PANE_COUNT..MAX_PANE_COUNT). */
+  panes: string[];
   logRefreshIntervalMs: number;
   reconnectDurationS: number;
   primaryColor: ColorOverride;
@@ -58,7 +61,7 @@ function isValidColorOverride(value: unknown): value is ColorOverride {
 /** Validates a persisted pane list: right length, every id still exists.
  *  Returns `null` (rather than patching it up entry-by-entry) if it isn't
  *  usable as-is — the caller falls back to a fresh default in that case,
- *  same spirit as the legacy {left,right} migration below it. */
+ *  same spirit as the legacy shape migrations below it. */
 function sanitizePanes(candidate: unknown): string[] | null {
   if (!Array.isArray(candidate)) return null;
   if (candidate.length < MIN_PANE_COUNT || candidate.length > MAX_PANE_COUNT) return null;
@@ -67,9 +70,7 @@ function sanitizePanes(candidate: unknown): string[] | null {
 
 function loadPersisted(): PersistedSettings {
   const fallback: PersistedSettings = {
-    defaultFrame: {
-      panes: Array.from({ length: DEFAULT_PANE_COUNT }, (_, i) => defaultFrameId(i)),
-    },
+    panes: Array.from({ length: DEFAULT_PANE_COUNT }, (_, i) => defaultFrameId(i)),
     logRefreshIntervalMs: DEFAULT_LOG_REFRESH_MS,
     reconnectDurationS: DEFAULT_RECONNECT_DURATION_S,
     primaryColor: null,
@@ -78,23 +79,29 @@ function loadPersisted(): PersistedSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
-    const parsed = JSON.parse(raw) as Partial<PersistedSettings> | null;
+    const parsed = JSON.parse(raw) as
+      | (Partial<PersistedSettings> & {
+          /** Pre-remembered-layout shape: a separately-configured "default
+           *  frame" rather than the actual last-shown layout. */
+          defaultFrame?: { panes?: unknown; left?: string; right?: string };
+        })
+      | null;
 
-    let panes = sanitizePanes(parsed?.defaultFrame?.panes);
+    let panes = sanitizePanes(parsed?.panes) ?? sanitizePanes(parsed?.defaultFrame?.panes);
     if (!panes) {
       // Pre-multi-pane storage shape — carry a left/right pair forward into
       // a 2-entry pane list rather than silently discarding it.
-      const legacy = parsed?.defaultFrame as Partial<{ left: string; right: string }> | undefined;
+      const legacy = parsed?.defaultFrame;
       panes =
         isValidFrameId(legacy?.left) && isValidFrameId(legacy?.right)
           ? [legacy.left, legacy.right]
-          : fallback.defaultFrame.panes;
+          : fallback.panes;
     }
 
     const logRefreshIntervalMs = parsed?.logRefreshIntervalMs;
     const reconnectDurationS = parsed?.reconnectDurationS;
     return {
-      defaultFrame: { panes },
+      panes,
       logRefreshIntervalMs: isValidLogRefreshMs(logRefreshIntervalMs)
         ? logRefreshIntervalMs
         : fallback.logRefreshIntervalMs,
@@ -111,10 +118,16 @@ function loadPersisted(): PersistedSettings {
 
 const persisted = loadPersisted();
 
-/** Configured in the Settings modal — what each pane shows on next launch,
- *  plus other tunables. */
+/** What's actually showing in each pane — switching frames via a header's
+ *  dropdown, or resizing pane count in Settings, mutates this directly and
+ *  it's persisted as-is (see the watcher below), so next launch reopens
+ *  exactly where this one left off. */
+export const activeFrame = reactive({
+  panes: [...persisted.panes],
+});
+
+/** Other tunables, configured in the Settings modal. */
 export const settingsState = reactive({
-  defaultFrame: { panes: [...persisted.defaultFrame.panes] },
   logRefreshIntervalMs: persisted.logRefreshIntervalMs,
   reconnectDurationS: persisted.reconnectDurationS,
   primaryColor: persisted.primaryColor,
@@ -123,23 +136,14 @@ export const settingsState = reactive({
 
 watch(
   () => ({
-    panes: [...settingsState.defaultFrame.panes],
+    panes: [...activeFrame.panes],
     logRefreshIntervalMs: settingsState.logRefreshIntervalMs,
     reconnectDurationS: settingsState.reconnectDurationS,
     primaryColor: settingsState.primaryColor,
     accentColor: settingsState.accentColor,
   }),
-  ({ panes, logRefreshIntervalMs, reconnectDurationS, primaryColor, accentColor }) => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        defaultFrame: { panes },
-        logRefreshIntervalMs,
-        reconnectDurationS,
-        primaryColor,
-        accentColor,
-      } satisfies PersistedSettings),
-    );
+  (snapshot) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot satisfies PersistedSettings));
   },
 );
 
@@ -163,18 +167,5 @@ function bindColorOverride(cssVar: string, get: () => ColorOverride): void {
 
 bindColorOverride("--primary", () => settingsState.primaryColor);
 bindColorOverride("--accent", () => settingsState.accentColor);
-
-/**
- * What's actually showing in each pane right now. Seeded from the defaults
- * above but deliberately a separate array: switching frames via a header's
- * dropdown changes what you see immediately without silently rewriting what
- * "default" means — that only happens explicitly, in Settings. Pane *count*
- * is the one exception: SettingsModal.vue's "Number of frames" control
- * resizes this array directly (as well as the default above) so a count
- * change is visible without a restart — see its own comment there.
- */
-export const activeFrame = reactive({
-  panes: [...settingsState.defaultFrame.panes],
-});
 
 export { FRAMES };

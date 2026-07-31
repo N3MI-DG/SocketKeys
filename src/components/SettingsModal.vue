@@ -3,7 +3,7 @@ import { open as openFileDialog, save as saveFileDialog } from "@tauri-apps/plug
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { exportAllData, importAllData, isExportedData } from "../lib/dataExport";
-import { defaultFrameId, FRAMES } from "../lib/frames";
+import { defaultFrameId } from "../lib/frames";
 import {
   activeFrame,
   LOG_REFRESH_INTERVALS_MS,
@@ -18,10 +18,6 @@ import Dropdown from "./Dropdown.vue";
 import WebPanelModal from "./WebPanelModal.vue";
 
 const open = defineModel<boolean>({ required: true });
-
-const frameOptions = computed(() =>
-  FRAMES.value.map((frame) => ({ id: frame.id, label: frame.name })),
-);
 
 const ADD_NEW_ID = "__add_new__";
 const panelModalOpen = ref(false);
@@ -86,28 +82,20 @@ const paneCountOptions = Array.from(
   (_, i) => MIN_PANE_COUNT + i,
 ).map((n) => ({ id: String(n), label: String(n) }));
 
-/** Grows/shrinks a panes array in place — appending a fresh default per
+/** Grows/shrinks the panes array in place — appending a fresh default per
  *  new slot, or just truncating — leaving every existing entry's own
- *  choice alone either way. Shared by the two arrays below since both need
- *  the exact same resize logic, just applied to different targets. */
+ *  choice alone either way. */
 function resizePanes(panes: string[], target: number): void {
   while (panes.length < target) panes.push(defaultFrameId(panes.length));
   panes.length = target;
 }
 
-// Unlike every other field here, this one applies immediately — SplitPane
-// re-renders live off activeFrame.panes.length, so there's no reason to
-// make this wait for a restart the way default frame *content* still does
-// (that's what the header dropdowns are for while the app's running).
-// settingsState.defaultFrame.panes is kept in lockstep purely so the new
-// count also survives to the next launch, same as any other setting.
+// Applies immediately — SplitPane re-renders live off activeFrame.panes.length,
+// and activeFrame.panes is what's persisted (see settings.ts), so this needs
+// no separate "default" copy to keep in lockstep.
 const paneCountId = computed({
-  get: () => String(settingsState.defaultFrame.panes.length),
-  set: (id: string) => {
-    const target = Number(id);
-    resizePanes(settingsState.defaultFrame.panes, target);
-    resizePanes(activeFrame.panes, target);
-  },
+  get: () => String(activeFrame.panes.length),
+  set: (id: string) => resizePanes(activeFrame.panes, Number(id)),
 });
 
 // Dropdown deals only in string ids — intervals are stored/compared as ms
@@ -240,23 +228,6 @@ async function startImport() {
                 ariaLabel="Number of frames"
               />
             </div>
-
-            <div
-              v-for="(_paneId, index) in settingsState.defaultFrame.panes"
-              :key="index"
-              class="field"
-            >
-              <label :id="`default-frame-${index}-label`">Default frame {{ index + 1 }}</label>
-              <Dropdown
-                v-model="settingsState.defaultFrame.panes[index]"
-                :options="frameOptions"
-                :ariaLabel="`Default frame ${index + 1}`"
-              />
-            </div>
-
-            <p class="hint">
-              Default frame content takes effect the next time SocketKeys starts.
-            </p>
 
             <div class="field">
               <label id="web-panels-label">Web panels</label>
