@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   connect,
   connectionState,
   disconnect,
 } from "../lib/moonraker/connection";
 import { recentConnections } from "../lib/recentConnections";
+import { REPO, updateCheckState } from "../lib/updateCheck";
 
 const settingsOpen = defineModel<boolean>("settingsOpen", { default: false });
 
@@ -126,6 +128,10 @@ function toggleConnection() {
   }
   void connect(combinedAddress.value);
 }
+
+function openLatestRelease() {
+  void openUrl(`https://github.com/${REPO}/releases/latest`);
+}
 </script>
 
 <template>
@@ -195,6 +201,16 @@ function toggleConnection() {
     <div class="titlebar-spacer" data-tauri-drag-region />
 
     <div class="titlebar-end">
+      <button
+        v-if="updateCheckState.available"
+        type="button"
+        class="connect-btn update-btn"
+        :title="updateCheckState.latestVersion ? `Version ${updateCheckState.latestVersion} is available` : 'Update available'"
+        @click="openLatestRelease"
+      >
+        Update Available
+      </button>
+
       <button
         class="control"
         type="button"
@@ -380,6 +396,10 @@ function toggleConnection() {
 .connect-btn.connected:hover {
   border-color: var(--text-muted);
   color: var(--text);
+}
+
+.update-btn {
+  margin-right: 8px;
 }
 
 .popover {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import TitleBar from "./components/TitleBar.vue";
 import SplitPane from "./components/SplitPane.vue";
 import SettingsModal from "./components/SettingsModal.vue";
@@ -10,6 +10,7 @@ import MacrosPanel from "./components/macros/MacrosPanel.vue";
 import WebPanel from "./components/web/WebPanel.vue";
 import Toast from "./components/Toast.vue";
 import { activeFrame } from "./lib/settings";
+import { checkForUpdate } from "./lib/updateCheck";
 
 /** The one place that maps a frame id to its component — everything else
  *  (settings, the header dropdowns) only deals in ids/metadata, to avoid a
@@ -36,6 +37,8 @@ const panes = computed(() =>
 );
 
 const settingsOpen = ref(false);
+
+onMounted(() => void checkForUpdate());
 </script>
 
 <template>
