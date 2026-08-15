@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import TitleBar from "./components/TitleBar.vue";
+import WindowResizeHandles from "./components/WindowResizeHandles.vue";
 import SplitPane from "./components/SplitPane.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import ObjectTree from "./components/tree/ObjectTree.vue";
@@ -43,6 +44,7 @@ onMounted(() => void checkForUpdate());
 
 <template>
   <div class="app">
+    <WindowResizeHandles />
     <TitleBar v-model:settings-open="settingsOpen" />
     <SettingsModal v-model="settingsOpen" />
     <Toast />
