@@ -90,11 +90,15 @@ const isMacro = computed(
   () => !!activeCommand.value && isKnownMacro(activeCommand.value),
 );
 
-/** True once a macro's params are confirmed fetched with zero named `params.X`
- *  references — distinct from `null` (not a macro, or source not loaded yet),
- *  which must still show the detail view's loading/help state. */
+/** True once a command's params are confirmed empty — a macro with zero
+ *  named `params.X` references, or a bundled builtin with an empty `params`
+ *  list. False (not just "unconfirmed") for anything still ambiguous: a
+ *  macro whose source hasn't loaded yet, or a command with no bundled
+ *  reference at all — those must still show the detail view's loading/help
+ *  state rather than assume there's nothing left to fill in. */
 function commandHasNoParams(name: string): boolean {
-  return isKnownMacro(name) && getMacroParams(name)?.length === 0;
+  if (isKnownMacro(name)) return getMacroParams(name)?.length === 0;
+  return getBuiltinInfo(name)?.params.length === 0;
 }
 
 /** Nothing left to fill in for this command — the detail popover would have
@@ -168,23 +172,18 @@ function navigateHistory(delta: number) {
 /** A trailing space readies the input for typing a param — pointless (and
  *  visibly wrong) when the command takes none. */
 function applySuggestion(name: string) {
-  draft.value = commandHasNoParams(name) ? name : `${name} `;
-  suggestionsOpen.value = false;
+  const noParams = commandHasNoParams(name);
+  draft.value = noParams ? name : `${name} `;
+  suggestionsOpen.value = !noParams;
   inputEl.value?.focus();
 }
 
-/**
- * Accepts whatever the popover is currently offering. False if there's
- * nothing to accept — including a name that's already fully typed with a
- * confirmed empty param list, since there's nothing left to complete and
- * Enter should submit it on the first press rather than silently no-op.
- */
 function acceptActive(): boolean {
   if (suggestions.value.length) {
     applySuggestion(suggestions.value[highlightIndex.value] ?? suggestions.value[0]);
     return true;
   }
-  if (activeCommand.value && !hasCommittedSpace.value && !activeHasNoParams.value) {
+  if (activeCommand.value && !hasCommittedSpace.value) {
     applySuggestion(activeCommand.value);
     return true;
   }
@@ -202,8 +201,10 @@ function onKeydown(event: KeyboardEvent) {
     if (acceptActive()) event.preventDefault();
     return;
   }
-  if (event.key === "Enter" && acceptActive()) {
-    event.preventDefault();
+  if (event.key === "Enter") {
+    if (suggestions.value.length && acceptActive()) {
+      event.preventDefault();
+    }
     return;
   }
   if (event.key === "ArrowDown") {
