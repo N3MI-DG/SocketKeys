@@ -11,10 +11,10 @@
  * applies; its own periodic "Stats <time>: ..." lines are the closest thing
  * it has to a timestamp, so those get the same prefix treatment.
  *
- * Line numbers count rows within the currently buffered window (see
- * `MAX_CONTENT_LENGTH` in logs.ts), not absolute position in the file on
- * disk — the buffer is a sliding tail, so "line 1" points at whatever is
- * oldest in memory right now, not the file's actual first line.
+ * Line numbers reflect true position in the file, not just position within
+ * the currently buffered window (see `MAX_CONTENT_LENGTH` in logs.ts) — the
+ * caller passes `startLine` as 1 plus however many lines have already been
+ * trimmed off the front of the buffer.
  */
 
 export type LogLevel = "error" | "warning" | "muted" | "normal";
@@ -25,6 +25,9 @@ export interface LogLine {
   prefix: string | null;
   rest: string;
   level: LogLevel;
+  /** A klippy.log periodic "Stats <time>: ..." line — the Logs panel's
+   *  "Suppress Stats" button filters these out on request. */
+  isStats: boolean;
 }
 
 const MOONRAKER_PREFIX =
@@ -53,20 +56,29 @@ function classify(line: string): LogLevel {
   return "normal";
 }
 
-export function formatLogLines(content: string): LogLine[] {
+export function formatLogLines(
+  content: string,
+  startLine = 1,
+  hideStats = false,
+): LogLine[] {
   if (!content) return [];
 
   // split() on a trailing "\n" leaves a phantom empty final element.
   const rawLines = content.split("\n");
   if (rawLines[rawLines.length - 1] === "") rawLines.pop();
 
-  return rawLines.map((line, index) => {
-    const match = MOONRAKER_PREFIX.exec(line) ?? KLIPPY_STATS_PREFIX.exec(line);
+  const lines = rawLines.map((line, index) => {
+    const moonrakerMatch = MOONRAKER_PREFIX.exec(line);
+    const statsMatch = moonrakerMatch ? null : KLIPPY_STATS_PREFIX.exec(line);
+    const match = moonrakerMatch ?? statsMatch;
     return {
-      number: index + 1,
+      number: startLine + index,
       prefix: match ? match[1] : null,
       rest: match ? match[2] : line,
       level: classify(line),
+      isStats: statsMatch !== null,
     };
   });
+
+  return hideStats ? lines.filter((line) => !line.isStats) : lines;
 }

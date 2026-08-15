@@ -37,17 +37,17 @@ function startResize(event: MouseEvent, direction: (typeof EDGES)[number]["direc
 
 .n,
 .s {
-  left: 6px;
-  right: 6px;
-  height: 4px;
+  left: var(--resize-edge);
+  right: var(--resize-edge);
+  height: var(--resize-edge);
   cursor: ns-resize;
 }
 
 .e,
 .w {
-  top: 6px;
-  bottom: 6px;
-  width: 4px;
+  top: var(--resize-edge);
+  bottom: var(--resize-edge);
+  width: var(--resize-edge);
   cursor: ew-resize;
 }
 

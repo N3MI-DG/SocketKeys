@@ -145,6 +145,7 @@ function resetPair(index: number) {
   display: flex;
   min-height: 0;
   overflow: hidden;
+  padding: 0 var(--resize-edge) var(--resize-edge) var(--resize-edge);
 }
 
 .pane {

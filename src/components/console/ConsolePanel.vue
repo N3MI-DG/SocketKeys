@@ -12,6 +12,7 @@ import {
 import ConsoleInput from "./ConsoleInput.vue";
 import FrameDropdown from "../FrameDropdown.vue";
 import { formatConsoleMessage } from "../../lib/consoleFormat";
+import { useAutoScroll } from "../../lib/useAutoScroll";
 
 defineProps<{ paneIndex: number }>();
 
@@ -32,44 +33,17 @@ const placeholder = computed(() => {
 
 const logEl = ref<HTMLElement | null>(null);
 
-/**
- * Auto-follows new output, but only while the log was already scrolled to
- * (near) the bottom right before this update. Deliberately reads scroll
- * position fresh on each update rather than tracking it via a separate
- * `scroll` listener: a burst of rapid pushes (a multi-line macro response
- * firing several `notify_gcode_response`s within milliseconds) let that
- * listener's own `scrollTop` assignment race the *next* push's DOM patch —
- * by the time its resulting `scroll` event actually fired, `scrollHeight`
- * had already grown past what it accounted for, so it read a stale
- * distance-from-bottom, wrongly concluded the user had scrolled away, and
- * silently disabled auto-scroll for good. Reading fresh here, synchronously
- * before the `await nextTick()` below (the watcher runs pre-flush, so the
- * DOM still reflects the *previous* entry count at that point), can't drift
- * out of sync with what actually changed.
- *
- * Watches `entries` itself (deep) rather than `entries.length`: once the
- * log fills up, `trimEntries()` pushes a new entry and immediately splices
- * the oldest one off in the same synchronous call, so `.length` goes
- * 500 -> 501 -> 500 within a single reactive flush. `watch` only invokes its
- * callback when the *source's value* actually differs from before, and
- * `.length` ends that batch exactly where it started — so once the 500-entry
- * cap kicks in, auto-scroll would silently stop firing for the rest of the
- * session. A deep watch on the array is trigger-based rather than
- * value-diffed, so both the push and the splice register as real mutations
- * regardless of where `.length` nets out.
- */
-watch(
-  () => consoleState.entries,
-  async () => {
-    const el = logEl.value;
-    if (!el) return;
-    const wasPinned = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
-    if (!wasPinned) return;
-    await nextTick();
-    el.scrollTop = el.scrollHeight;
-  },
-  { deep: true },
-);
+// Watches `entries` itself (deep) rather than `entries.length`: once the log
+// fills up, `trimEntries()` pushes a new entry and immediately splices the
+// oldest one off in the same synchronous call, so `.length` goes
+// 500 -> 501 -> 500 within a single reactive flush. `watch` only invokes its
+// callback when the *source's value* actually differs from before, and
+// `.length` ends that batch exactly where it started — so once the 500-entry
+// cap kicks in, auto-scroll would silently stop firing for the rest of the
+// session. A deep watch on the array is trigger-based rather than
+// value-diffed, so both the push and the splice register as real mutations
+// regardless of where `.length` nets out.
+useAutoScroll(logEl, () => consoleState.entries, true);
 
 function loadIfNeeded() {
   if (!connected.value) return;

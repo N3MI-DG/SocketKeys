@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Right-frame panel: pick a Moonraker-served log file and watch it update live. */
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { connectionState } from "../../lib/moonraker/connection";
 import { formatLogLines } from "../../lib/logFormat";
 import {
@@ -11,8 +11,11 @@ import {
   selectLog,
 } from "../../lib/moonraker/logs";
 import { showToast } from "../../lib/toast";
+import { settingsState } from "../../lib/settings";
 import FrameDropdown from "../FrameDropdown.vue";
 import Dropdown from "../Dropdown.vue";
+import ConfirmModal from "../ConfirmModal.vue";
+import { useAutoScroll } from "../../lib/useAutoScroll";
 
 defineProps<{ paneIndex: number }>();
 
@@ -44,7 +47,32 @@ const selectedFile = computed({
 
 const canRollover = computed(() => rolloverApplication(logsState.selected) !== null);
 
-const lines = computed(() => formatLogLines(logsState.content));
+// klippy.log's periodic "Stats ...: ..." lines are the only ones this
+// applies to (see logFormat.ts) — no point offering the toggle elsewhere.
+const isKlippyLog = computed(
+  () => (logsState.selected?.split("/").pop() ?? "") === "klippy.log",
+);
+
+const rolloverConfirmOpen = ref(false);
+
+// Rolling over klippy.log stops and restarts the Klipper process itself —
+// worth a pause first. moonraker.log's rollover only restarts Moonraker's
+// own logging, no service interruption, so that one fires immediately.
+function onRolloverClick() {
+  if (rolloverApplication(logsState.selected) === "klipper") {
+    rolloverConfirmOpen.value = true;
+  } else {
+    void handleRollover();
+  }
+}
+
+const lines = computed(() =>
+  formatLogLines(
+    logsState.content,
+    logsState.lineOffset + 1,
+    isKlippyLog.value && !settingsState.showKlippyStats,
+  ),
+);
 
 async function handleRollover() {
   const path = logsState.selected;
@@ -80,42 +108,20 @@ watch(
 );
 
 const logEl = ref<HTMLElement | null>(null);
-/** Set on selecting a new file, consumed by the next content update — a
- *  freshly opened log should always open snapped to its tail regardless of
- *  wherever the previous file's scroll position happened to be. */
-let forcePinNext = false;
+const { pinNext } = useAutoScroll(logEl, () => logsState.content);
 
-watch(
-  () => logsState.selected,
-  () => {
-    forcePinNext = true;
-  },
-);
+// A freshly opened log should always open snapped to its tail regardless of
+// wherever the previous file's scroll position happened to be.
+watch(() => logsState.selected, pinNext);
 
-/**
- * Auto-follows new content, but only while the log was already scrolled to
- * (near) the bottom right before this update — read fresh here rather than
- * tracked via a `scroll` listener, since a listener's own `scrollTop`
- * assignment can race a fast-arriving next update (its `scroll` event firing
- * after `scrollHeight` had already grown again), reading a stale
- * distance-from-bottom and silently disabling auto-scroll for good. Reading
- * synchronously here, before the `await nextTick()` below (the watcher runs
- * pre-flush, so the DOM still reflects the *previous* content at that point),
- * can't drift out of sync with what actually changed.
- */
-watch(
-  () => logsState.content,
-  async () => {
-    const el = logEl.value;
-    if (!el) return;
-    const wasPinned =
-      forcePinNext || el.scrollHeight - el.scrollTop - el.clientHeight < 24;
-    forcePinNext = false;
-    if (!wasPinned) return;
-    await nextTick();
-    el.scrollTop = el.scrollHeight;
-  },
-);
+// Old content only gets trimmed off the front (logs.ts's MAX_CONTENT_LENGTH
+// cap) while pinned to the bottom — otherwise it'd silently shift whatever
+// the user has scrolled up to read. This keeps that flag live.
+function trackPinned() {
+  const el = logEl.value;
+  if (!el) return;
+  logsState.pinnedToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+}
 </script>
 
 <template>
@@ -132,13 +138,29 @@ watch(
           class="file-dropdown"
         />
         <button
+          v-if="isKlippyLog"
+          class="icon-btn"
+          type="button"
+          title="Supress Stats"
+          aria-label="Supress Stats"
+          :class="{ active: !settingsState.showKlippyStats }"
+          :aria-pressed="!settingsState.showKlippyStats"
+          @click="settingsState.showKlippyStats = !settingsState.showKlippyStats"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <line x1="12" y1="11" x2="12" y2="16" />
+            <circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+        <button
           v-if="canRollover"
           class="icon-btn"
           type="button"
           title="Rollover log"
           aria-label="Rollover log"
           :disabled="logsState.rollingOver"
-          @click="handleRollover"
+          @click="onRolloverClick"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10" />
@@ -148,7 +170,7 @@ watch(
       </div>
     </div>
 
-    <div ref="logEl" class="log">
+    <div ref="logEl" class="log" @scroll="trackPinned">
       <p v-if="!connected" class="notice">{{ placeholder }}</p>
       <p v-else-if="logsState.filesError" class="notice error">
         {{ logsState.filesError }}
@@ -167,6 +189,14 @@ watch(
         </template>
       </div>
     </div>
+
+    <ConfirmModal
+      v-model="rolloverConfirmOpen"
+      title="Restart Klipper?"
+      message="Rolling over klippy.log stops and restarts Klipper."
+      confirm-label="Roll over"
+      @confirm="handleRollover"
+    />
   </div>
 </template>
 
@@ -237,6 +267,11 @@ watch(
   cursor: default;
 }
 
+.icon-btn.active {
+  background: var(--surface-2);
+  color: var(--primary);
+}
+
 .notice {
   margin: 0;
   padding: 16px;
@@ -251,6 +286,7 @@ watch(
 .log {
   flex: 1 1 auto;
   overflow: auto;
+  overflow-anchor: none;
   padding: 6px 0;
 }
 

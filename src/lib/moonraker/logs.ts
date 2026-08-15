@@ -48,6 +48,8 @@ export const logsState = reactive({
   filesError: null as string | null,
   selected: null as string | null,
   content: "",
+  lineOffset: 0,
+  pinnedToBottom: true,
   loading: false,
   error: null as string | null,
   rollingOver: false,
@@ -73,8 +75,28 @@ export function rolloverApplication(path: string | null): string | null {
   return ROLLOVER_APPLICATIONS[base] ?? null;
 }
 
+/** Excludes dmesg, crash dumps, and rollover backups (renamed aside with a
+ *  timestamp suffix, so they no longer end in `.log`) from the dropdown. */
+function isLogFile(path: string): boolean {
+  return path.toLowerCase().endsWith(".log");
+}
+
 /** Bytes already fetched for the selected file — drives the next Range request. */
 let knownSize = 0;
+
+/**
+ * Consecutive failed tail polls. A single failure is nearly always the HTTP
+ * keep-alive connection being reused a moment after Moonraker closed it
+ * (Tornado times idle connections out; the pool behind `tauriFetch` finds
+ * out by writing into a socket that's already gone), and the very next poll
+ * succeeds. That's a transport hiccup on a *different* connection than the
+ * websocket, which stays open throughout — so surfacing it immediately made
+ * the panel flash a connection error every few minutes for no reason.
+ */
+let consecutiveFailures = 0;
+
+/** How many polls in a row must fail before it's worth telling the user. */
+const FAILURES_BEFORE_ERROR = 3;
 
 let tailTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -113,9 +135,9 @@ export async function loadLogFiles(): Promise<void> {
     const result = await client.call<FileListItem[]>("server.files.list", {
       root: "logs",
     });
-    logsState.files = (Array.isArray(result) ? result : []).sort(
-      (a, b) => b.modified - a.modified,
-    );
+    logsState.files = (Array.isArray(result) ? result : [])
+      .filter((file) => isLogFile(file.path))
+      .sort((a, b) => b.modified - a.modified);
     logsState.filesLoaded = true;
   } catch (err) {
     logsState.filesError = err instanceof Error ? err.message : String(err);
@@ -127,8 +149,11 @@ export async function loadLogFiles(): Promise<void> {
 export async function selectLog(path: string): Promise<void> {
   logsState.selected = path;
   logsState.content = "";
+  logsState.lineOffset = 0;
+  logsState.pinnedToBottom = true;
   logsState.error = null;
   knownSize = 0;
+  consecutiveFailures = 0;
   startTailPolling();
   await refreshLog();
 }
@@ -141,7 +166,6 @@ export async function refreshLog(isRetry = false): Promise<void> {
   if (!path || !base) return;
 
   logsState.loading = true;
-  logsState.error = null;
   try {
     const url = `${base}/server/files/logs/${path
       .split("/")
@@ -152,41 +176,74 @@ export async function refreshLog(isRetry = false): Promise<void> {
     const response = await tauriFetch(url, { method: "GET", headers });
 
     if (response.status === 416) {
-      // Requested range starts past the current end — file shrank
-      // (rotated/truncated). Reset and re-read from scratch, once.
+      // A 416 here is *usually* just "nothing was appended since the last
+      // poll": `bytes=<size>-` starts exactly at EOF, which RFC 9110 counts
+      // as unsatisfiable, and Tornado (which serves this handler) answers
+      // that with 416 rather than an empty 206. Only a *shrinking* file
+      // means a real rotation/truncation, and the two are distinguishable
+      // by the total in the mandatory `Content-Range: bytes */<size>`.
+      // Treating every idle poll as a rotation re-downloaded the whole file
+      // and reset lineOffset each tick, which re-rendered the panel with a
+      // different set of lines (the untrimmed head comes back, numbering
+      // restarts at 1) and visibly shifted the reading position back and
+      // forth on every poll.
+      const total = parseContentRangeTotal(response.headers.get("content-range"));
+      if (total === knownSize) {
+        markPollSucceeded();
+        return;
+      }
+
       knownSize = 0;
+      logsState.lineOffset = 0;
       if (!isRetry) return refreshLog(true);
       throw new Error("Log file could not be read after rotation");
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const text = await response.text();
-    const contentRange = response.headers.get("content-range");
-    const rangeTotal = parseContentRangeTotal(contentRange);
+    const declaredLength = Number(response.headers.get("content-length"));
+    const byteLength = Number.isFinite(declaredLength) && declaredLength > 0
+      ? declaredLength
+      : new TextEncoder().encode(text).length;
 
-    if (response.status === 206 && rangeTotal !== null) {
-      // A real partial response — append the new tail.
+    if (response.status === 206) {
+      // A 206 guarantees `text` is a partial body, never the full file,
+      // regardless of whether Content-Range came through parseable — so
+      // this always appends. Content-Range's total is preferred for the
+      // next Range request when available (authoritative — reflects the
+      // server's actual current file size), but a locally-tracked running
+      // offset is just as correct when it's missing or malformed, and
+      // doesn't risk misreading a real partial response as the whole file.
       logsState.content += text;
-      knownSize = rangeTotal;
+      const rangeTotal = parseContentRangeTotal(response.headers.get("content-range"));
+      knownSize = rangeTotal ?? knownSize + byteLength;
     } else {
       // Full 200 response: either the initial load, or the server ignored
       // our Range (some do, instead of a real partial response) — either
       // way this is the complete current file, so replace, not append.
       logsState.content = text;
-      const contentLength = Number(response.headers.get("content-length"));
-      knownSize = Number.isFinite(contentLength) && contentLength > 0
-        ? contentLength
-        : text.length;
+      knownSize = byteLength;
     }
 
-    if (logsState.content.length > MAX_CONTENT_LENGTH) {
-      logsState.content = logsState.content.slice(-MAX_CONTENT_LENGTH);
-    }
+    trimContent();
+    markPollSucceeded();
   } catch (err) {
-    logsState.error = err instanceof Error ? err.message : String(err);
+    // Hold on to whatever is already on screen and stay quiet until the
+    // failures look persistent rather than incidental — but say something
+    // straight away when there's nothing displayed yet, since an empty
+    // panel with no explanation is worse than a premature error.
+    consecutiveFailures += 1;
+    if (consecutiveFailures >= FAILURES_BEFORE_ERROR || !logsState.content) {
+      logsState.error = err instanceof Error ? err.message : String(err);
+    }
   } finally {
     logsState.loading = false;
   }
+}
+
+function markPollSucceeded(): void {
+  consecutiveFailures = 0;
+  logsState.error = null;
 }
 
 /**
@@ -221,6 +278,20 @@ export async function rolloverSelectedLog(): Promise<void> {
   }
 }
 
+function trimContent(): void {
+  if (!logsState.pinnedToBottom) return;
+
+  const overflow = logsState.content.length - MAX_CONTENT_LENGTH;
+  if (overflow <= 0) return;
+
+  let cut = logsState.content.indexOf("\n", overflow);
+  cut = cut === -1 ? logsState.content.length : cut + 1;
+
+  const removed = logsState.content.slice(0, cut);
+  logsState.lineOffset += (removed.match(/\n/g) ?? []).length;
+  logsState.content = logsState.content.slice(cut);
+}
+
 function parseContentRangeTotal(headerValue: string | null): number | null {
   // Format: "bytes 200-1000/67589" — total is the part after the slash.
   if (!headerValue) return null;
@@ -236,10 +307,13 @@ export function reset(): void {
   logsState.filesError = null;
   logsState.selected = null;
   logsState.content = "";
+  logsState.lineOffset = 0;
+  logsState.pinnedToBottom = true;
   logsState.loading = false;
   logsState.error = null;
   logsState.rollingOver = false;
   knownSize = 0;
+  consecutiveFailures = 0;
 }
 
 /** Removes any entry at `path` from the in-memory file list, if present. */
@@ -274,22 +348,25 @@ onNotification("notify_filelist_changed", (params) => {
     if (existing) {
       existing.size = item.size;
       existing.modified = item.modified;
-    } else {
-      // New to us — a rollover backup, or a file recreated after having
-      // briefly not existed (e.g. klipper's log once it finishes restarting).
-      // `knownSize` is stale in the latter case: it describes byte offsets
-      // into the *previous* file at this path, which have no relationship
-      // to this one — trusting it would send a Range request that happens
-      // to be satisfiable against the new file by sheer coincidence and
-      // splice an unrelated fragment onto the old content instead of
-      // replacing it. Forcing a full re-read is the only correct move here.
-      if (item.path === logsState.selected) knownSize = 0;
+    } else if (isLogFile(item.path)) {
+      // New to us — a file recreated after having briefly not existed (e.g.
+      // klipper's log once it finishes restarting). `knownSize` is stale in
+      // that case: it describes byte offsets into the *previous* file at
+      // this path, which have no relationship to this one — trusting it
+      // would send a Range request that happens to be satisfiable against
+      // the new file by sheer coincidence and splice an unrelated fragment
+      // onto the old content instead of replacing it. Forcing a full
+      // re-read is the only correct move here.
+      if (item.path === logsState.selected) {
+        knownSize = 0;
+        logsState.lineOffset = 0;
+      }
       logsState.files.push({ ...item });
       logsState.files.sort((a, b) => b.modified - a.modified);
     }
   }
 
-  if (item.path === logsState.selected) void refreshLog();
+  if (item.path === logsState.selected && !logsState.loading) void refreshLog();
 });
 
 watch(

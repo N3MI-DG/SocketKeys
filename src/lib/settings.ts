@@ -38,6 +38,9 @@ interface PersistedSettings {
   reconnectDurationS: number;
   primaryColor: ColorOverride;
   accentColor: ColorOverride;
+  /** Logs panel's "Suppress Stats" button — whether klippy.log's periodic
+   *  "Stats ...: ..." lines are shown. */
+  showKlippyStats: boolean;
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -75,6 +78,7 @@ function loadPersisted(): PersistedSettings {
     reconnectDurationS: DEFAULT_RECONNECT_DURATION_S,
     primaryColor: null,
     accentColor: null,
+    showKlippyStats: true,
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -110,6 +114,10 @@ function loadPersisted(): PersistedSettings {
         : fallback.reconnectDurationS,
       primaryColor: isValidColorOverride(parsed?.primaryColor) ? parsed.primaryColor : fallback.primaryColor,
       accentColor: isValidColorOverride(parsed?.accentColor) ? parsed.accentColor : fallback.accentColor,
+      showKlippyStats:
+        typeof parsed?.showKlippyStats === "boolean"
+          ? parsed.showKlippyStats
+          : fallback.showKlippyStats,
     };
   } catch {
     return fallback; // malformed storage — start clean rather than crash
@@ -132,6 +140,7 @@ export const settingsState = reactive({
   reconnectDurationS: persisted.reconnectDurationS,
   primaryColor: persisted.primaryColor,
   accentColor: persisted.accentColor,
+  showKlippyStats: persisted.showKlippyStats,
 });
 
 watch(
@@ -141,6 +150,7 @@ watch(
     reconnectDurationS: settingsState.reconnectDurationS,
     primaryColor: settingsState.primaryColor,
     accentColor: settingsState.accentColor,
+    showKlippyStats: settingsState.showKlippyStats,
   }),
   (snapshot) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot satisfies PersistedSettings));
