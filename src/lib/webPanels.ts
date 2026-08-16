@@ -40,7 +40,7 @@ export const ADDR_PLACEHOLDER = "*addr*";
  *  as its own id/name so a pre-existing default-frame setting pointing at
  *  "web" (from before user-removable web panels existed) still resolves
  *  correctly. */
-const DEFAULT_WEB_PANEL: WebPanelDef = { id: "web", name: "", address: ADDR_PLACEHOLDER };
+const DEFAULT_WEB_PANEL: WebPanelDef = { id: "web", name: "Web Interface", address: ADDR_PLACEHOLDER };
 
 function isWebPanelDef(value: unknown): value is WebPanelDef {
   if (typeof value !== "object" || value === null) return false;
