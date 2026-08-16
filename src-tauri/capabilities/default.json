@@ -19,6 +19,7 @@
     "websocket:default",
     "dialog:default",
     "fs:allow-write-text-file",
-    "fs:allow-read-text-file"
+    "fs:allow-read-text-file",
+    "os:default"
   ]
 }

@@ -9,6 +9,7 @@ import {
 } from "../lib/moonraker/connection";
 import { recentConnections } from "../lib/recentConnections";
 import { REPO, updateCheckState } from "../lib/updateCheck";
+import { isMobile } from "../lib/platform";
 
 const settingsOpen = defineModel<boolean>("settingsOpen", { default: false });
 
@@ -79,6 +80,7 @@ async function syncMaximized() {
 }
 
 onMounted(async () => {
+  if (isMobile) return;
   await syncMaximized();
   unlisten = await appWindow.onResized(syncMaximized);
 });
@@ -232,7 +234,7 @@ function openLatestRelease() {
         </svg>
       </button>
 
-      <div class="window-controls">
+      <div v-if="!isMobile" class="window-controls">
         <button
           class="control"
           type="button"

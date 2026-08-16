@@ -68,3 +68,53 @@ jobs:
         run: |
           cp src-tauri/target/release/socketkeys.exe SocketKeys-standalone.exe
           gh release upload "${{ github.ref_name }}" SocketKeys-standalone.exe --clobber
+
+  build-android:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27
+          link-to-sdk: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build unsigned Android debug APK
+        env:
+          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: npx tauri android build --debug --target aarch64
+
+      - name: Upload debug APK to release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name "*debug*.apk" | head -n1)
+          cp "$apk" SocketKeys-android-arm64-debug.apk
+          gh release upload "${{ github.ref_name }}" SocketKeys-android-arm64-debug.apk --clobber

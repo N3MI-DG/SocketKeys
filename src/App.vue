@@ -12,6 +12,7 @@ import WebPanel from "./components/web/WebPanel.vue";
 import Toast from "./components/Toast.vue";
 import { activeFrame } from "./lib/settings";
 import { checkForUpdate } from "./lib/updateCheck";
+import { isMobile } from "./lib/platform";
 
 /** The one place that maps a frame id to its component — everything else
  *  (settings, the header dropdowns) only deals in ids/metadata, to avoid a
@@ -44,7 +45,7 @@ onMounted(() => void checkForUpdate());
 
 <template>
   <div class="app">
-    <WindowResizeHandles />
+    <WindowResizeHandles v-if="!isMobile" />
     <TitleBar v-model:settings-open="settingsOpen" />
     <SettingsModal v-model="settingsOpen" />
     <Toast />
