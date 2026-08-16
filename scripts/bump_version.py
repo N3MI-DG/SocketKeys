@@ -13,9 +13,13 @@ PACKAGE_JSON = ROOT / "package.json"
 PACKAGE_LOCK_JSON = ROOT / "package-lock.json"
 TAURI_CONF_JSON = ROOT / "src-tauri" / "tauri.conf.json"
 CARGO_TOML = ROOT / "src-tauri" / "Cargo.toml"
+CARGO_LOCK = ROOT / "src-tauri" / "Cargo.lock"
 
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")
 CARGO_VERSION_RE = re.compile(r'(?m)^version\s*=\s*"([^"]+)"')
+CARGO_LOCK_SOCKETKEYS_VERSION_RE = re.compile(
+    r'(?m)(^name = "socketkeys"\nversion = )"([^"]+)"'
+)
 
 
 def read_json(path: Path) -> dict:
@@ -39,6 +43,23 @@ def set_cargo_version(new_version: str) -> None:
     if count != 1:
         sys.exit(f"Could not update version in {CARGO_TOML}")
     CARGO_TOML.write_text(updated, encoding="utf-8")
+
+
+def cargo_lock_socketkeys_version() -> str:
+    match = CARGO_LOCK_SOCKETKEYS_VERSION_RE.search(CARGO_LOCK.read_text(encoding="utf-8"))
+    if not match:
+        sys.exit(f"Could not find the socketkeys package in {CARGO_LOCK}")
+    return match.group(2)
+
+
+def set_cargo_lock_version(new_version: str) -> None:
+    text = CARGO_LOCK.read_text(encoding="utf-8")
+    updated, count = CARGO_LOCK_SOCKETKEYS_VERSION_RE.subn(
+        rf'\1"{new_version}"', text, count=1
+    )
+    if count != 1:
+        sys.exit(f"Could not update the socketkeys package version in {CARGO_LOCK}")
+    CARGO_LOCK.write_text(updated, encoding="utf-8")
 
 
 def set_package_json_version(new_version: str) -> None:
@@ -68,6 +89,7 @@ def main() -> None:
         "package-lock.json": read_json(PACKAGE_LOCK_JSON)["version"],
         "src-tauri/tauri.conf.json": read_json(TAURI_CONF_JSON)["version"],
         "src-tauri/Cargo.toml": cargo_version(),
+        "src-tauri/Cargo.lock": cargo_lock_socketkeys_version(),
     }
 
     print("Current version(s):")
@@ -86,10 +108,11 @@ def main() -> None:
     set_package_lock_version(new_version)
     set_tauri_conf_version(new_version)
     set_cargo_version(new_version)
+    set_cargo_lock_version(new_version)
 
     print(
         f"\nUpdated package.json, package-lock.json, src-tauri/tauri.conf.json, "
-        f"and src-tauri/Cargo.toml to {new_version}."
+        f"src-tauri/Cargo.toml, and src-tauri/Cargo.lock to {new_version}."
     )
 
     tag = f"v{new_version}"

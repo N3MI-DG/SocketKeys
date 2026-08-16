@@ -24,6 +24,18 @@ function stripLeadingV(tag: string): string {
   return tag.replace(/^v/i, "");
 }
 
+function isNewerVersion(a: string, b: string): boolean {
+  const partsA = a.split(".").map(Number);
+  const partsB = b.split(".").map(Number);
+  const length = Math.max(partsA.length, partsB.length);
+  for (let i = 0; i < length; i++) {
+    const numA = partsA[i] ?? 0;
+    const numB = partsB[i] ?? 0;
+    if (numA !== numB) return numA > numB;
+  }
+  return false;
+}
+
 export async function checkForUpdate(): Promise<void> {
   try {
     const [current, response] = await Promise.all([
@@ -42,7 +54,7 @@ export async function checkForUpdate(): Promise<void> {
 
     const latestVersion = stripLeadingV(release.tag_name);
     updateCheckState.latestVersion = latestVersion;
-    updateCheckState.available = latestVersion !== current;
+    updateCheckState.available = isNewerVersion(latestVersion, current);
   } catch (err) {
     // GitHub unreachable
     console.warn("[update-check] failed", err);
